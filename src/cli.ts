@@ -23,7 +23,8 @@ const HELP = `用法：npm run gongpai -- <命令>
   show --project <编号>                             打印项目现场
   context --project <编号> --task <T01>              打印续接上下文
   serve [--port 4173]                              打开本地网页
-  eval [--only S1]                                 用真模型跑样本评估`;
+  eval [--only S1]                                 用真模型跑样本评估
+  demo                                             用样本数据建两个示例项目（不调用模型）`;
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
@@ -92,6 +93,10 @@ async function main() {
   } else if (cmd === 'serve') {
     const { serve } = await import('./server.ts');
     serve(db(), Number(values.port ?? 4173));
+  } else if (cmd === 'demo') {
+    const { loadDemo } = await import('./demo.ts');
+    const ids = loadDemo(db());
+    console.log(`已建示例项目：${ids.join('、')}。运行 npm run gongpai -- serve 查看`);
   } else if (cmd === 'eval') {
     console.log('用真模型跑样本，推理模型每批要几十秒……');
     const { reports, outDir } = await runEval(deepseek(), values.only);

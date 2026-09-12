@@ -19,7 +19,11 @@ export function buildContext(db: Db, projectId: string, taskId: string): string 
   const thisRound = step?.action
     ?? { todo: `开始「${task.name}」`, doing: `继续「${task.name}」`, to_verify: `验证「${task.name}」`, blocked: `先解决「${task.name}」的阻塞`, done: `「${task.name}」已完成，如需修改请先说明要改什么`, cancelled: '', pending_confirm: `先确认「${task.name}」的目标` }[task.status];
   const cancelled = view.tasks.filter((t) => t.status === 'cancelled');
-  const decisions = view.decisions.filter((d) => d.kind !== 'cancel').slice(-5)
+  // 只带和这个任务相关的决定：决定引用的消息和任务在同一段会话里
+  const sessionOf = new Map(db.messagesForProject(projectId).map((m) => [m.id, m.sessionId]));
+  const citeOf = new Map(db.evidenceForProject(projectId).map((e) => [e.id, e.cite]));
+  const related = (evId: string) => (citeOf.get(evId) ?? []).some((id) => task.sessions.includes(sessionOf.get(id) ?? ''));
+  const decisions = view.decisions.filter((d) => d.kind !== 'cancel' && related(d.evidenceId)).slice(-5)
     .map((d) => `- ${d.kind === 'adopt' ? '采用' : '否决'}：${d.text}（原因：${d.reason ?? '未说明'}）`);
   const sessions = task.sessions.map((sid) => db.getSession(sid)).filter((s) => !!s).map((s) => `${s!.label}${s!.title ? `「${s!.title}」` : ''}`);
   const history = task.history.slice(-5).map((h) => `- ${h.at.slice(0, 10)} ${STATUS_LABEL[h.to]}：${h.note}`);
@@ -37,6 +41,6 @@ export function buildContext(db: Db, projectId: string, taskId: string): string 
     `线索：${list(sessions)}`,
     `其他任务：已完成 ${list(others('done'))}；待验证 ${list(others('to_verify'))}`,
     `不要做（已取消）：${list(cancelled.map((t) => t.name))}`,
-    `本轮请做：${thisRound}；完成标准：${task.doneCondition ?? '做完后告诉我怎么验证'}`,
+    `本轮请做：${thisRound}；完成标准：${task.doneCondition ?? (task.status === 'to_verify' ? '告诉我验证方法和结果，发现问题就直接说' : '做完后告诉我怎么验证')}`,
   ].join('\n');
 }

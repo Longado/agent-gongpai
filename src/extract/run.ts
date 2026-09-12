@@ -74,6 +74,57 @@ export interface ExtractResult {
   errors: string[];
 }
 
+/** 整理一批。失败时对半拆开重试，拆到一条消息还失败才算失败。 */
+async function runBatch(db: Db, projectId: string, model: ModelCall, session: Session, msgs: Message[], res: ExtractResult): Promise<boolean> {
+  res.batches++;
+  const key = createHash('sha1').update([session.id, msgs[0].id, msgs.at(-1)!.id, msgs.length, PROMPT_VERSION, model.name].join('|')).digest('hex');
+  const upto = msgs.at(-1)!.seq;
+  if (db.batchDone(key)) { db.setExtractedUpto(session.id, upto); return true; }
+
+  const { system, user, refs } = buildPrompt(db, projectId, db.getSession(session.id)!, msgs);
+  let evidence: unknown[] | null = null;
+  let lastError = '';
+  let fatal = false;
+  for (let attempt = 0; attempt < 2 && evidence === null; attempt++) { // 格式不对时带着错误重试一次
+    const prompt = attempt === 0 ? user : `${user}\n\n上一次的输出不符合要求：${lastError}\n请只输出符合格式的 JSON。`;
+    let raw: string;
+    try {
+      raw = await model.call(system, prompt);
+    } catch (e) {
+      lastError = (e as Error).message;
+      if (e instanceof ModelError && !e.retryable) { fatal = true; break; }
+      continue;
+    }
+    try {
+      const parsed = ExtractionOutput.safeParse(JSON.parse(raw));
+      if (parsed.success) evidence = parsed.data.evidence;
+      else lastError = parsed.error.issues.slice(0, 3).map((x) => `${x.path.join('.')}：${x.message}`).join('；');
+    } catch {
+      lastError = '不是合法的 JSON';
+    }
+  }
+  if (evidence === null) {
+    // 长批次容易被截断：拆成两半再试（密钥无效、余额不足这类错误拆了也没用）
+    if (!fatal && msgs.length > 1) {
+      const mid = Math.ceil(msgs.length / 2);
+      res.batches--;
+      return (await runBatch(db, projectId, model, session, msgs.slice(0, mid), res)) && runBatch(db, projectId, model, session, msgs.slice(mid), res);
+    }
+    res.failed++;
+    res.errors.push(`${session.label}${session.title ? `「${session.title}」` : ''}：${lastError}`);
+    db.recordBatch({ key, projectId, sessionId: session.id, uptoSeq: upto, status: 'failed', error: lastError });
+    return false;
+  }
+  // 模型用短编号回答已有任务，这里换回完整编号
+  const mapped = evidence.map((e: any) => (e?.task?.id && !String(e.task.id).includes('/') ? { ...e, task: { id: `${projectId}/${e.task.id}` } } : e));
+  const r = storeEvidence(db, projectId, mapped, refs, { model: model.name, promptVersion: PROMPT_VERSION, batchKey: key });
+  res.stored += r.stored.length;
+  res.dropped.push(...r.dropped.map((d) => ({ why: d.why })));
+  db.recordBatch({ key, projectId, sessionId: session.id, uptoSeq: upto, status: 'ok' });
+  db.setExtractedUpto(session.id, upto);
+  return true;
+}
+
 export async function extractProject(db: Db, projectId: string, model: ModelCall, opts: { maxChars?: number; onBatch?: (i: number, n: number) => void } = {}): Promise<ExtractResult> {
   const res: ExtractResult = { batches: 0, stored: 0, dropped: [], failed: 0, errors: [] };
   // 各会话的新消息切批。同一会话内严格按消息顺序；不同会话之间按时间交错，
@@ -90,45 +141,8 @@ export async function extractProject(db: Db, projectId: string, model: ModelCall
 
   for (const [i, { session, msgs }] of work.entries()) {
     opts.onBatch?.(i + 1, work.length);
-    res.batches++;
-    const key = createHash('sha1').update([session.id, msgs[0].id, msgs.at(-1)!.id, msgs.length, PROMPT_VERSION, model.name].join('|')).digest('hex');
-    const upto = msgs.at(-1)!.seq;
-    if (db.batchDone(key)) { db.setExtractedUpto(session.id, upto); continue; }
-
-    const { system, user, refs } = buildPrompt(db, projectId, db.getSession(session.id)!, msgs);
-    let evidence: unknown[] | null = null;
-    let lastError = '';
-    for (let attempt = 0; attempt < 2 && evidence === null; attempt++) { // 格式不对时带着错误重试一次
-      const prompt = attempt === 0 ? user : `${user}\n\n上一次的输出不符合要求：${lastError}\n请只输出符合格式的 JSON。`;
-      let raw: string;
-      try {
-        raw = await model.call(system, prompt);
-      } catch (e) {
-        lastError = (e as Error).message;
-        if (e instanceof ModelError && !e.retryable) break;
-        continue;
-      }
-      try {
-        const parsed = ExtractionOutput.safeParse(JSON.parse(raw));
-        if (parsed.success) evidence = parsed.data.evidence;
-        else lastError = parsed.error.issues.slice(0, 3).map((x) => `${x.path.join('.')}：${x.message}`).join('；');
-      } catch {
-        lastError = '不是合法的 JSON';
-      }
-    }
-    if (evidence === null) {
-      res.failed++;
-      res.errors.push(`${session.label}${session.title ? `「${session.title}」` : ''}：${lastError}`);
-      db.recordBatch({ key, projectId, sessionId: session.id, uptoSeq: upto, status: 'failed', error: lastError });
-      break; // 后面的批次依赖前面的任务清单，失败就停在这里，下次从这里继续
-    }
-    // 模型用短编号回答已有任务，这里换回完整编号
-    const mapped = evidence.map((e: any) => (e?.task?.id && !String(e.task.id).includes('/') ? { ...e, task: { id: `${projectId}/${e.task.id}` } } : e));
-    const r = storeEvidence(db, projectId, mapped, refs, { model: model.name, promptVersion: PROMPT_VERSION, batchKey: key });
-    res.stored += r.stored.length;
-    res.dropped.push(...r.dropped.map((d) => ({ why: d.why })));
-    db.recordBatch({ key, projectId, sessionId: session.id, uptoSeq: upto, status: 'ok' });
-    db.setExtractedUpto(session.id, upto);
+    const ok = await runBatch(db, projectId, model, session, msgs, res);
+    if (!ok) break; // 后面的批次依赖前面的任务清单，失败就停在这里，下次从这里继续
   }
   return res;
 }

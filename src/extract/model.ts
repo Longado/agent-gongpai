@@ -17,7 +17,7 @@ const TIMEOUT_MS = 300_000; // 推理模型一批要几十秒，给足余量
 
 export function deepseek(opts: { apiKey?: string; model?: string; baseUrl?: string } = {}): ModelCall {
   const apiKey = opts.apiKey ?? process.env.DEEPSEEK_API_KEY;
-  const model = opts.model ?? process.env.GONGPAI_MODEL ?? 'deepseek-v4-pro';
+  const model = opts.model ?? process.env.GONGPAI_MODEL ?? 'deepseek-flash';
   const baseUrl = opts.baseUrl ?? 'https://api.deepseek.com';
   return {
     name: model,
@@ -42,7 +42,9 @@ export function deepseek(opts: { apiKey?: string; model?: string; baseUrl?: stri
       if (res.status === 402) throw new ModelError('模型接口余额不足', false);
       if (res.status === 429 || res.status >= 500) throw new ModelError(`模型接口暂时不可用（${res.status}），稍后重试`, true);
       if (!res.ok) throw new ModelError(`模型接口返回错误（${res.status}）：${body.slice(0, 300)}`, false);
-      const content = JSON.parse(body)?.choices?.[0]?.message?.content;
+      const choice = JSON.parse(body)?.choices?.[0];
+      if (choice?.finish_reason === 'length') throw new ModelError('模型输出被截断（批次太长）', true);
+      const content = choice?.message?.content;
       if (typeof content !== 'string') throw new ModelError('模型没有返回内容', true);
       return content;
     },

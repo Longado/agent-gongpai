@@ -150,9 +150,11 @@ export function openDb(path: string) {
         projectId,
       ).map(toMessage);
     },
-    messagesByIds(ids: string[]) {
+    messagesByIds(ids: string[], projectId?: string) {
       if (ids.length === 0) return [];
-      return all(`SELECT * FROM messages WHERE id IN (${ids.map(() => '?').join(',')})`, ...ids).map(toMessage);
+      const marks = ids.map(() => '?').join(',');
+      if (!projectId) return all(`SELECT * FROM messages WHERE id IN (${marks})`, ...ids).map(toMessage);
+      return all(`SELECT m.* FROM messages m JOIN sessions s ON s.id = m.session_id WHERE m.id IN (${marks}) AND s.project_id = ?`, ...ids, projectId).map(toMessage);
     },
 
     addTask(t: Omit<TaskRecord, 'id'>): string {

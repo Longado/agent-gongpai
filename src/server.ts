@@ -71,6 +71,10 @@ export function serve(db: Db, port: number) {
     if (!taskId.startsWith(`${projectId}/`)) throw new HttpError(400, '任务不属于这个项目');
     return taskId;
   };
+  const ownEvidence = (projectId: string, evidenceId: string) => {
+    if (!db.evidenceForProject(projectId).some((e) => e.id === evidenceId)) throw new HttpError(400, '证据不属于这个项目');
+    return evidenceId;
+  };
   const project = (id: string) => {
     const p = db.getProject(id);
     if (!p) throw new HttpError(404, '项目不存在，可能已被删除');
@@ -122,15 +126,6 @@ export function serve(db: Db, port: number) {
       });
     }
 
-    if (method === 'GET' && parts[1] === 'messages') {
-      const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50);
-      const msgs = db.messagesByIds(ids).map((m) => {
-        const s = db.getSession(m.sessionId);
-        return { ...m, session: s && { label: s.label, title: s.title, coverage: s.coverage, source: s.source } };
-      });
-      return send(res, 200, msgs);
-    }
-
     if (parts[1] !== 'projects') throw new HttpError(404, '找不到这个地址');
 
     if (method === 'POST' && parts.length === 2) {
@@ -154,6 +149,16 @@ export function serve(db: Db, port: number) {
       const sessions = db.sessionsForProject(id).map((s) => ({ id: s.id, label: s.label, title: s.title, coverage: s.coverage, source: s.source, messages: db.messagesForSession(s.id).length }));
       db.logUsage(id, 'open_project');
       return send(res, 200, { project: p, view, evidence, sessions, failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
+    }
+
+    if (method === 'GET' && parts[3] === 'messages') {
+      // 只返回当前项目的消息（安全评审：之前是全局接口，知道编号就能跨项目读原文）
+      const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50);
+      const msgs = db.messagesByIds(ids, id).map((m) => {
+        const s = db.getSession(m.sessionId);
+        return { ...m, session: s && { label: s.label, title: s.title, coverage: s.coverage, source: s.source } };
+      });
+      return send(res, 200, msgs);
     }
 
     if (method === 'GET' && parts[3] === 'context') {
@@ -217,6 +222,7 @@ export function serve(db: Db, port: number) {
       db.logUsage(id, `correction_${c.type}`);
       switch (c.type) {
         case 'new_task': {
+          if (c.evidenceId) ownEvidence(id, c.evidenceId);
           const taskId = db.addTask({ projectId: id, name: c.name, goal: null, createdAt: new Date().toISOString() });
           if (c.evidenceId) db.addCorrection(id, { type: 'assign', evidenceId: c.evidenceId, taskId });
           db.addCorrection(id, { type: 'set_status', taskId, status: 'todo', note: '你手动建的任务' });
@@ -242,6 +248,10 @@ export function serve(db: Db, port: number) {
           break;
         case 'assign':
           ownTask(id, c.taskId);
+          ownEvidence(id, c.evidenceId);
+          break;
+        case 'ack':
+          ownEvidence(id, c.evidenceId);
           break;
       }
       db.addCorrection(id, c as never);

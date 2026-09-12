@@ -251,7 +251,7 @@ async function renderSettings() {
           <label>名称<input type="text" id="np-n"></label><label>一句话目标<input type="text" id="np-g"></label>
           <label>代码目录（绝对路径）<input type="text" id="np-d" placeholder="/Users/你/code/项目"></label>
           <div><button class="btn pri" data-act="create">建项目</button></div></div></div>
-        <div class="blk"><div class="blk-t">整理方式</div><div>整理使用远程模型 ${esc(s.model)}，只发送已绑定项目的对话正文。读取时已把像密钥、令牌的内容换成“[已隐藏的凭证]”。</div></div>
+        <div class="blk"><div class="blk-t">整理方式</div><div>整理使用远程模型 ${esc(s.model)}，只发送已绑定项目的对话正文。读取时已把像密钥、令牌的内容换成“[已隐藏的凭证]”，但只覆盖常见格式；特别敏感的对话请自己再核对一遍。</div></div>
         ${app.pid && app.data ? `<div class="blk"><div class="blk-t">数据控制 · ${esc(app.data.project.name)}</div>
           <div class="s">暂停采集：不再读取新对话，已有数据保留。删除项目：同时删除它的对话、任务、证据和修正记录，不能恢复；本机的 Claude Code 和 Codex 原始记录不受影响。</div>
           <div class="row" style="margin-top:8px"><button class="btn" data-act="pause" data-paused="${app.data.project.paused ? '1' : '0'}">${app.data.project.paused ? '恢复采集' : '暂停采集'}</button><button class="btn dg" data-act="delete">删除项目</button></div></div>
@@ -284,7 +284,7 @@ async function openEvidence(evId) {
   const drawer = $('#drawer');
   drawer.hidden = false;
   drawer.innerHTML = '<div class="muted">加载原文…</div>';
-  const msgs = await api(`/api/messages?ids=${encodeURIComponent(ev.cite.join(','))}`);
+  const msgs = await api(`/api/projects/${app.pid}/messages?ids=${encodeURIComponent(ev.cite.join(','))}`);
   const who = { user: '你', assistant: 'AI', tool_error: '工具报错' };
   drawer.innerHTML = `<div class="row" style="justify-content:space-between;margin-bottom:10px"><b>原文</b><button class="link" data-act="close-drawer">关闭</button></div>
     <div class="s" style="margin-bottom:10px">${esc(ev.detail)}${ev.reason ? ` · 原因：${esc(ev.reason)}` : ''}</div>

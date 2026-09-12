@@ -23,13 +23,14 @@ function cleanUserText(text: string): string | null {
 interface Parsed {
   sessionId: string | null;
   cwd: string | null;
+  version: string | null;
   messages: Omit<Message, 'seq'>[];
   badLines: number;
 }
 
 // ponytail: Codex 的工具输出里基本没有稳定的退出码，这一版不收工具报错；以后可以从 exec 事件里取
 export function parseCodexLines(lines: string[], capturedAt: string, known: { sessionId?: string | null } = {}): Parsed {
-  const out: Parsed = { sessionId: known.sessionId ?? null, cwd: null, messages: [], badLines: 0 };
+  const out: Parsed = { sessionId: known.sessionId ?? null, cwd: null, version: null, messages: [], badLines: 0 };
   for (const line of lines) {
     let d: Record<string, any>;
     try {
@@ -42,6 +43,7 @@ export function parseCodexLines(lines: string[], capturedAt: string, known: { se
     if (d.type === 'session_meta') {
       out.sessionId = p.session_id ?? p.id ?? out.sessionId;
       out.cwd = p.cwd ?? null;
+      out.version = p.cli_version ?? null;
       continue;
     }
     if (d.type !== 'response_item' || p.type !== 'message' || !out.sessionId) continue;
@@ -108,6 +110,7 @@ export function syncCodex(db: Db, opts: { root?: string; resolveRoot?: (dir: str
     const head = parseCodexLines(peekHead(file, 64 * 1024).slice(0, 1), capturedAt);
     if (!head.sessionId || !head.cwd) continue;
     const known = db.getSession(head.sessionId);
+    if (known?.excluded) continue; // 你移出过的会话不再读
     const projectId = known?.projectId ?? db.projectForDir(resolve(head.cwd)) ?? db.projectForDir(head.cwd);
     if (projectId && db.isPaused(projectId)) continue; // 暂停采集的项目不读新内容
     if (!projectId) {
@@ -117,7 +120,7 @@ export function syncCodex(db: Db, opts: { root?: string; resolveRoot?: (dir: str
       continue;
     }
     res.files++;
-    db.upsertSession({ id: head.sessionId, source: 'codex', label: 'Codex', projectId, cwd: head.cwd, title: names.get(head.sessionId) ?? null, coverage: 'full', file });
+    db.upsertSession({ id: head.sessionId, source: 'codex', label: 'Codex', projectId, cwd: head.cwd, title: names.get(head.sessionId) ?? null, coverage: 'full', file, toolVersion: head.version });
     const session = db.getSession(head.sessionId)!;
     const { lines, next } = readNewLines(file, session.cursor);
     const parsed = parseCodexLines(lines, capturedAt, { sessionId: head.sessionId });

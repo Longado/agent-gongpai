@@ -23,7 +23,7 @@ const HELP = `用法：npm run corpus -- <命令>
   project pause|resume --project <编号>              暂停或恢复采集（已有数据保留）
   sync [--no-extract]                              读取 Claude Code 和 Codex 的新对话，并整理
   import <文件> --project <编号> --label <来源> --title <标题> [--partial] [--date YYYY-MM-DD]
-  extract [--project <编号>]                        只整理，不读取
+  extract [--project <编号>] [--fresh]              只整理，不读取；--fresh 清掉旧证据从头整理（任务编号和修正保留）
   show --project <编号>                             打印项目现场
   context --project <编号> --task <T01>              打印续接上下文
   serve [--port 4173]                              打开本地网页
@@ -36,7 +36,7 @@ const { positionals, values } = parseArgs({
   options: {
     dir: { type: 'string', multiple: true }, goal: { type: 'string' }, project: { type: 'string' }, task: { type: 'string' },
     label: { type: 'string' }, title: { type: 'string' }, partial: { type: 'boolean' }, date: { type: 'string' },
-    'no-extract': { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
+    'no-extract': { type: 'boolean' }, fresh: { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
   },
 });
 
@@ -88,6 +88,7 @@ async function main() {
     console.log(`导入 ${r.newMessages} 条新消息${r.unsure ? '；有一段认不出发言者，请在页面上核对' : ''}`);
   } else if (cmd === 'extract') {
     const d = db();
+    if (values.fresh) for (const id of values.project ? [values.project] : d.listProjects().map((p) => p.id)) d.resetExtraction(id);
     await extractAll(d, values.project ? [values.project] : d.listProjects().map((p) => p.id));
   } else if (cmd === 'show') {
     const d = db();

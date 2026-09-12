@@ -22,16 +22,20 @@ export function openDb(path: string) {
   const cols = (db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]).map((c) => c.name);
   if (!cols.includes('paused')) db.exec('ALTER TABLE projects ADD COLUMN paused INTEGER NOT NULL DEFAULT 0');
   if (!cols.includes('remote_ok')) db.exec('ALTER TABLE projects ADD COLUMN remote_ok INTEGER NOT NULL DEFAULT 0');
+  const scols = (db.prepare('PRAGMA table_info(sessions)').all() as { name: string }[]).map((c) => c.name);
+  if (!scols.includes('excluded')) db.exec('ALTER TABLE sessions ADD COLUMN excluded INTEGER NOT NULL DEFAULT 0');
+  if (!scols.includes('tool_version')) db.exec('ALTER TABLE sessions ADD COLUMN tool_version TEXT');
 
   const all = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).all(...args) as Row[];
   const get = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).get(...args) as Row | undefined;
   const run = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).run(...args);
 
-  const toSession = (r: Row): Session & { file: string | null; cursor: number; extractedUpto: number } => ({
+  const toSession = (r: Row): Session & { file: string | null; cursor: number; extractedUpto: number; excluded: boolean; toolVersion: string | null } => ({
     id: r.id as string, source: r.source as Session['source'], label: r.label as string,
     projectId: (r.project_id as string) ?? null, cwd: (r.cwd as string) ?? null, title: (r.title as string) ?? null,
     coverage: r.coverage as Session['coverage'], file: (r.file as string) ?? null,
     cursor: Number(r.cursor), extractedUpto: Number(r.extracted_upto),
+    excluded: Number(r.excluded) === 1, toolVersion: (r.tool_version as string) ?? null,
   });
   const toMessage = (r: Row): Message => ({
     id: r.id as string, sessionId: r.session_id as string, seq: Number(r.seq), role: r.role as Role,
@@ -103,13 +107,14 @@ export function openDb(path: string) {
       });
     },
 
-    upsertSession(s: Session & { file?: string | null }) {
+    upsertSession(s: Session & { file?: string | null; toolVersion?: string | null }) {
       run(
-        `INSERT INTO sessions (id, source, label, project_id, cwd, title, coverage, file) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO sessions (id, source, label, project_id, cwd, title, coverage, file, tool_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET label = excluded.label, cwd = excluded.cwd,
            title = COALESCE(excluded.title, sessions.title), coverage = excluded.coverage, file = COALESCE(excluded.file, sessions.file),
+           tool_version = COALESCE(excluded.tool_version, sessions.tool_version),
            project_id = COALESCE(sessions.project_id, excluded.project_id)`,
-        s.id, s.source, s.label, s.projectId, s.cwd, s.title, s.coverage, s.file ?? null,
+        s.id, s.source, s.label, s.projectId, s.cwd, s.title, s.coverage, s.file ?? null, s.toolVersion ?? null,
       );
     },
     getSession(id: string) {
@@ -124,6 +129,29 @@ export function openDb(path: string) {
     },
     assignSession(sessionId: string, projectId: string) {
       run('UPDATE sessions SET project_id = ? WHERE id = ?', projectId, sessionId);
+    },
+    /** 重新整理之前：清掉这个项目的证据和整理记录，任务登记和人工修正保留，这样任务编号不变。 */
+    resetExtraction(projectId: string) {
+      tx(() => {
+        run('DELETE FROM evidence WHERE project_id = ?', projectId);
+        run('DELETE FROM batches WHERE project_id = ?', projectId);
+        run('UPDATE sessions SET extracted_upto = -1 WHERE project_id = ?', projectId);
+      });
+    },
+    /** 把误归类的会话移出项目：删掉它的消息和引用了这些消息的证据；会话标记为已移出，之后同步不再读它。 */
+    excludeSession(projectId: string, sessionId: string) {
+      const ids = new Set(all('SELECT id FROM messages WHERE session_id = ?', sessionId).map((r) => r.id as string));
+      tx(() => {
+        for (const e of all('SELECT id, cite FROM evidence WHERE project_id = ?', projectId)) {
+          if ((JSON.parse(e.cite as string) as string[]).some((id) => ids.has(id))) run('DELETE FROM evidence WHERE id = ?', e.id as string);
+        }
+        run('DELETE FROM messages WHERE session_id = ?', sessionId);
+        run('DELETE FROM batches WHERE session_id = ?', sessionId);
+        run('UPDATE sessions SET project_id = NULL, excluded = 1 WHERE id = ? AND project_id = ?', sessionId, projectId);
+      });
+    },
+    latestToolVersion(source: string): string | null {
+      return (get('SELECT tool_version FROM sessions WHERE source = ? AND tool_version IS NOT NULL ORDER BY rowid DESC LIMIT 1', source)?.tool_version as string) ?? null;
     },
     setCursor(sessionId: string, cursor: number) {
       run('UPDATE sessions SET cursor = ? WHERE id = ?', cursor, sessionId);

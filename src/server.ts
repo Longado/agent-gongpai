@@ -116,8 +116,8 @@ export function serve(db: Db, port: number) {
       const skipped: Record<string, number> = {};
       for (const r of [lastSync?.cc, lastSync?.cx]) for (const [k, n] of Object.entries(r?.skippedDirs ?? {})) skipped[k] = (skipped[k] ?? 0) + n;
       return send(res, 200, {
-        claudeCode: { installed: existsSync(join(homedir(), '.claude', 'projects')), ...src('claude_code') },
-        codex: { installed: existsSync(join(homedir(), '.codex', 'sessions')), ...src('codex') },
+        claudeCode: { installed: existsSync(join(homedir(), '.claude', 'projects')), version: db.latestToolVersion('claude_code'), ...src('claude_code') },
+        codex: { installed: existsSync(join(homedir(), '.codex', 'sessions')), version: db.latestToolVersion('codex'), ...src('codex') },
         imports: src('import'),
         lastSyncAt: lastSync?.at ?? null,
         badLines: (lastSync?.cc.badLines ?? 0) + (lastSync?.cx.badLines ?? 0),
@@ -198,6 +198,29 @@ export function serve(db: Db, port: number) {
 
     if (method === 'GET' && parts[3] === 'usage') {
       return send(res, 200, db.usageSummary(id));
+    }
+
+    if (method === 'POST' && parts[3] === 'reextract') {
+      // 换了提示词或模型后从头整理：证据清掉重来，任务编号和你的修正保留
+      if (!p.remoteOk) throw new HttpError(428, `整理会把这个项目的对话正文发送到远程模型 ${model.name}。请先确认。`);
+      if (syncing) throw new HttpError(409, '正在同步，请稍等');
+      syncing = true;
+      try {
+        db.resetExtraction(id);
+        db.logUsage(id, 'reextract');
+        const r = await extractProject(db, id, model);
+        return send(res, 200, { newMessages: 0, badLines: 0, ...r });
+      } finally {
+        syncing = false;
+      }
+    }
+
+    if (method === 'POST' && parts[3] === 'sessions' && parts[5] === 'exclude') {
+      const sid = parts[4];
+      if (!db.sessionsForProject(id).some((s) => s.id === sid)) throw new HttpError(400, '会话不属于这个项目');
+      db.excludeSession(id, sid);
+      db.logUsage(id, 'exclude_session');
+      return send(res, 200, { ok: true });
     }
 
     if (method === 'POST' && parts[3] === 'sync') {

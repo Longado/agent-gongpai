@@ -14,6 +14,7 @@ interface Parsed {
   sessionId: string | null;
   cwd: string | null;
   title: string | null;
+  version: string | null;
   messages: Omit<Message, 'seq'>[];
   badLines: number;
 }
@@ -49,7 +50,7 @@ function assistantText(content: unknown): string | null {
 }
 
 export function parseClaudeCodeLines(lines: string[], capturedAt: string): Parsed {
-  const out: Parsed = { sessionId: null, cwd: null, title: null, messages: [], badLines: 0 };
+  const out: Parsed = { sessionId: null, cwd: null, title: null, version: null, messages: [], badLines: 0 };
   for (const line of lines) {
     let d: Record<string, any>;
     try {
@@ -62,6 +63,7 @@ export function parseClaudeCodeLines(lines: string[], capturedAt: string): Parse
     if (d.type !== 'user' && d.type !== 'assistant') continue;
     out.sessionId ??= d.sessionId ?? null;
     out.cwd ??= d.cwd ?? null;
+    if (typeof d.version === 'string') out.version = d.version; // 取最新的一行，工具升级后会变
     if (d.isSidechain || d.isMeta || d.isCompactSummary || !d.uuid) continue;
     const content = d.message?.content;
     const picked = d.type === 'user' ? userText(content) : ((t) => (t ? { role: 'assistant' as const, text: t } : null))(assistantText(content));
@@ -101,6 +103,7 @@ export function syncClaudeCode(db: Db, opts: { root?: string; resolveRoot?: (dir
       const head = parseClaudeCodeLines(peekHead(file), capturedAt);
       if (!head.sessionId || !head.cwd) continue;
       const known = db.getSession(head.sessionId);
+      if (known?.excluded) continue; // 你移出过的会话不再读
       const projectId = known?.projectId ?? db.projectForDir(resolve(head.cwd)) ?? db.projectForDir(head.cwd);
       if (projectId && db.isPaused(projectId)) continue; // 暂停采集的项目不读新内容
       if (!projectId) {
@@ -110,12 +113,12 @@ export function syncClaudeCode(db: Db, opts: { root?: string; resolveRoot?: (dir
         continue;
       }
       res.files++;
-      db.upsertSession({ id: head.sessionId, source: 'claude_code', label: 'Claude Code', projectId, cwd: head.cwd, title: head.title, coverage: 'full', file });
+      db.upsertSession({ id: head.sessionId, source: 'claude_code', label: 'Claude Code', projectId, cwd: head.cwd, title: head.title, coverage: 'full', file, toolVersion: head.version });
       const session = db.getSession(head.sessionId)!;
       const { lines, next } = readNewLines(file, session.cursor);
       const parsed = parseClaudeCodeLines(lines, capturedAt);
       res.badLines += parsed.badLines;
-      if (parsed.title) db.upsertSession({ ...session, title: parsed.title });
+      if (parsed.title || parsed.version) db.upsertSession({ ...session, title: parsed.title ?? session.title, toolVersion: parsed.version ?? session.toolVersion });
       let seq = db.maxSeq(head.sessionId);
       const msgs: Message[] = parsed.messages.map((m) => ({ ...m, sessionId: head.sessionId!, seq: ++seq }));
       res.newMessages += db.insertMessages(msgs);

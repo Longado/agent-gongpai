@@ -230,8 +230,8 @@ async function renderSettings() {
   return `<div class="head"><div><h1>接入设置</h1><div class="sub">数据都存在本机</div></div><button class="btn pri" data-act="sync">同步</button></div>
   <div class="stack">
     <div class="tbl"><table><thead><tr><th>来源</th><th>状态</th><th>已读到</th><th>读取范围</th></tr></thead><tbody>
-      <tr><td>Claude Code</td><td>${status(s.claudeCode)}</td><td>${s.claudeCode.sessions} 个会话 · ${s.claudeCode.messages} 条</td><td>只读已绑定目录下的会话；子 agent 的会话暂不读取</td></tr>
-      <tr><td>Codex</td><td>${status(s.codex)}</td><td>${s.codex.sessions} 个会话 · ${s.codex.messages} 条</td><td>只读已绑定目录下的会话；工具报错暂不读取</td></tr>
+      <tr><td>Claude Code${s.claudeCode.version ? ` <span class="s">${esc(s.claudeCode.version)}</span>` : ''}</td><td>${status(s.claudeCode)}</td><td>${s.claudeCode.sessions} 个会话 · ${s.claudeCode.messages} 条</td><td>只读已绑定目录下的会话；子 agent 的会话暂不读取</td></tr>
+      <tr><td>Codex${s.codex.version ? ` <span class="s">${esc(s.codex.version)}</span>` : ''}</td><td>${status(s.codex)}</td><td>${s.codex.sessions} 个会话 · ${s.codex.messages} 条</td><td>只读已绑定目录下的会话；工具报错暂不读取</td></tr>
       <tr><td>网页 AI · 手动导入</td><td><span class="dot d-ok"></span>手动</td><td>${s.imports.sessions} 段 · ${s.imports.messages} 条</td><td>只包含你粘贴的部分；原始时间拿不到时记采集时间</td></tr>
     </tbody></table></div>
     <div class="s">上次同步：${s.lastSyncAt ? fmt(s.lastSyncAt) : '本次打开后还没同步'}${s.badLines ? ` · ${s.badLines} 行格式异常已跳过，已有数据不受影响` : ''}</div>
@@ -254,7 +254,11 @@ async function renderSettings() {
         <div class="blk"><div class="blk-t">整理方式</div><div>整理使用远程模型 ${esc(s.model)}，只发送已绑定项目的对话正文。读取时已把像密钥、令牌的内容换成“[已隐藏的凭证]”，但只覆盖常见格式；特别敏感的对话请自己再核对一遍。</div></div>
         ${app.pid && app.data ? `<div class="blk"><div class="blk-t">数据控制 · ${esc(app.data.project.name)}</div>
           <div class="s">暂停采集：不再读取新对话，已有数据保留。删除项目：同时删除它的对话、任务、证据和修正记录，不能恢复；本机的 Claude Code 和 Codex 原始记录不受影响。</div>
-          <div class="row" style="margin-top:8px"><button class="btn" data-act="pause" data-paused="${app.data.project.paused ? '1' : '0'}">${app.data.project.paused ? '恢复采集' : '暂停采集'}</button><button class="btn dg" data-act="delete">删除项目</button></div></div>
+          <div class="row" style="margin-top:8px"><button class="btn" data-act="pause" data-paused="${app.data.project.paused ? '1' : '0'}">${app.data.project.paused ? '恢复采集' : '暂停采集'}</button><button class="btn" data-act="reextract">重新整理</button><button class="btn dg" data-act="delete">删除项目</button></div>
+          <div class="s" style="margin-top:6px">重新整理：换了提示词或模型之后用。旧证据清掉重来，任务编号和你的修正保留。</div></div>
+        <div class="blk"><div class="blk-t">本项目的会话 · 归错了可以移出</div>
+          ${app.data.sessions.length ? app.data.sessions.map((x) => `<div class="line" style="grid-template-columns:minmax(0,1fr) auto auto"><span>${esc(x.label)} <span class="s">${esc(x.title ?? '')}</span></span><span class="s">${x.messages} 条${x.coverage === 'partial' ? ' · 部分' : ''}</span><button class="btn dg" data-act="exclude" data-sid="${esc(x.id)}">移出</button></div>`).join('') : '<div class="muted">还没有会话</div>'}
+          <div class="s" style="margin-top:6px">移出后，这段会话的消息和由它得出的结论会删掉，之后同步也不会再读它。</div></div>
         <div class="blk"><div class="blk-t">使用记录 · ${esc(app.data.project.name)}</div><div>${usageLine(await api(`/api/projects/${app.pid}/usage`))}</div><div class="s">只记次数，不记内容，用来判断这个工具是否真的在帮忙。</div></div>` : ''}
       </div>
     </div>
@@ -349,6 +353,26 @@ const on = {
     toast('已同意，开始整理');
     const btn = document.querySelector('[data-act="sync"]');
     if (btn) await on.sync(btn);
+  },
+  async reextract(el) {
+    if (el.dataset.armed !== '1') { el.dataset.armed = '1'; el.textContent = '再点一次，开始重新整理'; return; }
+    el.disabled = true;
+    el.textContent = '重新整理中…';
+    try {
+      const r = await api(`/api/projects/${app.pid}/reextract`, { method: 'POST' });
+      toast(`重新整理完成：新证据 ${r.stored} 条${r.failed ? `，${r.failed} 批失败` : ''}`);
+    } catch (err) {
+      if (err.status === 428) toast('先在概览页点一次“同步”并同意发送说明');
+      else throw err;
+    } finally {
+      await load().catch(() => {});
+    }
+  },
+  async exclude(el) {
+    if (el.dataset.armed !== '1') { el.dataset.armed = '1'; el.textContent = '确认移出'; return; }
+    await api(`/api/projects/${app.pid}/sessions/${encodeURIComponent(el.dataset.sid)}/exclude`, { method: 'POST' });
+    toast('已移出，结论已重新计算');
+    await load();
   },
   async pause(el) {
     const paused = el.dataset.paused !== '1';

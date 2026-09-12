@@ -104,7 +104,8 @@ export type Correction =
   | { type: 'confirm_condition'; taskId: string; condition: string }
   | { type: 'dismiss_next'; key: string }
   | { type: 'backfill_plan'; taskIds: string[] }
-  | { type: 'set_role'; messageId: string; role: Role };
+  | { type: 'set_role'; messageId: string; role: Role }
+  | { type: 'ack'; evidenceId: string }; // 待确认事项已处理
 
 export interface CorrectionRecord {
   id: string;
@@ -189,6 +190,7 @@ export interface PendingItem {
   evidenceId: string;
   text: string;
   taskId?: string;
+  suggestedStatus?: TaskStatus; // 冲突时新证据指向的状态
 }
 
 export interface NextStep {

@@ -64,9 +64,11 @@ export function fold(input: FoldInput): FoldOutput {
   // 1. 合并与改派：先把证据指向的任务改好
   const redirect = new Map<string, string>();
   const assigned = new Map<string, string>();
+  const acked = new Set<string>();
   for (const { correction: c } of input.corrections) {
     if (c.type === 'merge') redirect.set(c.from, c.into);
     if (c.type === 'assign') assigned.set(c.evidenceId, c.taskId);
+    if (c.type === 'ack') acked.add(c.evidenceId);
   }
   const resolve = (id: string): string => {
     let cur = id;
@@ -227,7 +229,7 @@ export function fold(input: FoldInput): FoldOutput {
 
     // 人工改过状态之后，更晚的证据不直接生效
     if (s.manualAt !== null && ev.t > s.manualAt && target.to !== s.status) {
-      out.pending.push({ kind: 'conflict', evidenceId: e.id, taskId: s.rec.id, text: `你把「${s.name}」改成了${STATUS_LABEL[s.status!]}；之后的记录显示：${e.detail}` });
+      out.pending.push({ kind: 'conflict', evidenceId: e.id, taskId: s.rec.id, suggestedStatus: target.to, text: `你把「${s.name}」改成了${STATUS_LABEL[s.status!]}；之后的记录显示：${e.detail}` });
       continue;
     }
     setStatus(s, target.to, target.basis, target.note, e.id, e.at);
@@ -236,6 +238,7 @@ export function fold(input: FoldInput): FoldOutput {
   }
 
   out.pending.push(...suggestions.values());
+  out.pending = out.pending.filter((p) => !acked.has(p.evidenceId));
   out.plan = { versions, noPlan: versions.length === 0 };
   const current = versions.at(-1);
   out.planOrder = current ? current.items.filter((i) => i.change !== 'cancelled').map((i) => i.taskId) : [];

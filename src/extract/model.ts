@@ -1,5 +1,5 @@
 // 调用大模型。整个项目只有证据整理这一处用到它。
-// 测试阶段用 DeepSeek（兼容 OpenAI 的接口），模型版本在 .env 的 GONGPAI_MODEL 里固定。
+// 测试阶段用 DeepSeek（兼容 OpenAI 的接口），模型版本在 .env 的 CORPUS_MODEL 里固定。
 export interface ModelCall {
   name: string; // 记进每条证据，方便事后追查
   call(system: string, user: string): Promise<string>;
@@ -17,7 +17,7 @@ const TIMEOUT_MS = 300_000; // 推理模型一批要几十秒，给足余量
 
 export function deepseek(opts: { apiKey?: string; model?: string; baseUrl?: string } = {}): ModelCall {
   const apiKey = opts.apiKey ?? process.env.DEEPSEEK_API_KEY;
-  const model = opts.model ?? process.env.GONGPAI_MODEL ?? 'deepseek-flash';
+  const model = opts.model ?? process.env.CORPUS_MODEL ?? 'deepseek-flash';
   const baseUrl = opts.baseUrl ?? 'https://api.deepseek.com';
   return {
     name: model,

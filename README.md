@@ -1,12 +1,12 @@
-# Agent 工牌
+# Working Corpus
 
-**你在 Claude Code、Codex 和网页 AI 之间来回切。工牌把这些对话整理成一页项目现场，每条结论都能点回原话。**
+**你在 Claude Code、Codex 和网页 AI 之间来回切。Working Corpus 把这些对话整理成一页项目现场，每条结论都能点回原话。**
 
 隔天回来，不用翻三段长对话，打开一页就知道：最初想做什么、后来改了什么、哪些真做完了、哪些只是 AI 说做完了、现在卡在哪、下一步做什么。换个工具接着干，点一下"继续"，把准确的背景带过去。
 
-![项目概览：AI 说导出做完了，工牌显示待验证，下一步是去验证它](docs/screenshot.png)
+![项目概览：AI 说导出做完了，Working Corpus 显示待验证，下一步是去验证它](docs/screenshot.png)
 
-<sub>截图是示例数据：AI 两次说导出做好了，中间用户报告过文件打不开。工牌把它标成"待验证"，不算完成。</sub>
+<sub>截图是示例数据：AI 两次说导出做好了，中间用户报告过文件打不开。Working Corpus 把它标成"待验证"，不算完成。</sub>
 
 ## 用 AI 做项目的人，每天都在问这四个问题
 
@@ -15,7 +15,7 @@
 3. 现在卡在哪，下一步该做什么？
 4. 换一个会话或工具，怎样不用把整个项目重新解释一遍？
 
-聊天记录里都有答案，只是散在不同工具的几十段对话里。工牌把它们读出来，整理成一页。
+聊天记录里都有答案，只是散在不同工具的几十段对话里。Working Corpus 把它们读出来，整理成一页。
 
 ## 打开之后你看到的
 
@@ -32,7 +32,7 @@
 
 ## 和别的记忆工具哪里不一样
 
-- **给人看，不是塞给 AI。** claude-mem、ai-memory 把记忆写回给 AI，SpecStory 把对话存成档案。工牌给你一页能扫一眼就懂的项目现场。
+- **给人看，不是塞给 AI。** claude-mem、ai-memory 把记忆写回给 AI，SpecStory 把对话存成档案。Working Corpus 给你一页能扫一眼就懂的项目现场。
 - **只认证据。** AI 说"做完了""测试通过了"，只算待验证；你确认了才算完成。每个状态都写明依据是你确认的、原文写明的，还是 AI 自述。
 - **大模型只做一件事。** 它只负责把消息标成证据，并且必须引用原话。任务状态、数量、规划版本、下一步都由代码按固定规则算出来，同样的记录永远得到同样的结果。
 - **你说了算。** 你改过的状态、合并过的任务，下一轮自动整理不会悄悄覆盖；有冲突就放进"待确认"，让你决定。
@@ -44,29 +44,29 @@
 
 ```
 npm install
-npm run gongpai -- demo      # 用样本数据建两个示例项目
-npm run gongpai -- serve     # 打开 http://127.0.0.1:4173
+npm run corpus -- demo      # 用样本数据建两个示例项目
+npm run corpus -- serve     # 打开 http://127.0.0.1:4173
 ```
 
 ## 用在自己的项目上
 
 ```
 cp .env.example .env                                   # 填 DEEPSEEK_API_KEY
-npm run gongpai -- project add "项目名" --dir /你的/代码目录 --goal "一句话目标"
-npm run gongpai -- serve                               # 在页面上点"同步"
+npm run corpus -- project add "项目名" --dir /你的/代码目录 --goal "一句话目标"
+npm run corpus -- serve                               # 在页面上点"同步"
 ```
 
-网页 AI 的对话在"接入设置"里粘贴导入，用"你：""Gemini："这样的开头区分发言者；只复制了一部分就勾上"只复制了一部分"，工牌不会拿缺失的前文下结论。
+网页 AI 的对话在"接入设置"里粘贴导入，用"你：""Gemini："这样的开头区分发言者；只复制了一部分就勾上"只复制了一部分"，Working Corpus 不会拿缺失的前文下结论。
 
 ## 在 AI 工具里直接取
 
-不想复制粘贴，就把工牌接到 AI 工具上。它提供三个只读工具：列出项目、看项目现场、生成某个任务的续接上下文。在 Claude Code 里注册：
+不想复制粘贴，就把 Working Corpus 接到 AI 工具上。它提供三个只读工具：列出项目、看项目现场、生成某个任务的续接上下文。在 Claude Code 里注册：
 
 ```
-claude mcp add gongpai -- node --no-warnings --env-file-if-exists=<仓库>/.env <仓库>/src/cli.ts mcp
+claude mcp add corpus -- node --no-warnings --env-file-if-exists=<仓库>/.env <仓库>/src/cli.ts mcp
 ```
 
-之后在对话里说"先看一下工牌里的项目现场，然后按续接上下文继续做 T03"就行。Codex 和 Cursor 的配置见 `docs/MCP.md`。
+之后在对话里说"先看一下 Working Corpus 里的项目现场，然后按续接上下文继续做 T03"就行。Codex 和 Cursor 的配置见 `docs/MCP.md`。
 
 ## 它是怎么工作的
 
@@ -89,7 +89,7 @@ Codex 会话文件 ───────┼─ 读取、过滤、去重、隐藏
 ## 数据和隐私
 
 - 只读取你绑定的目录下的会话，别的目录一概不读。
-- 数据都存在本机 `data/gongpai.db`；页面服务只监听 127.0.0.1。
+- 数据都存在本机 `~/.working-corpus/corpus.db`；页面服务只监听 127.0.0.1。
 - 第一次整理前会说明发送什么内容，你同意后才把对话正文发给远程模型。读取时已把像密钥、令牌的内容换成"[已隐藏的凭证]"。
 - 可以暂停采集（已有数据保留），也可以删除项目（相关记录一起清掉）。
 
@@ -107,7 +107,7 @@ MVP。已经能用，也有明确的边界：
 ```
 npm test                     # 单元测试，不调用模型
 npm run typecheck
-npm run gongpai -- eval      # 用真模型跑六个样本，硬红线有一条没过就返回失败
+npm run corpus -- eval      # 用真模型跑六个样本，硬红线有一条没过就返回失败
 ```
 
 | 文档 | 内容 |

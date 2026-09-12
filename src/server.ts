@@ -87,7 +87,7 @@ export function serve(db: Db, port: number) {
     // 防 DNS 重绑定：只接受本机地址访问
     if (!/^(127\.0\.0\.1|localhost):\d+$/.test(req.headers.host ?? '')) throw new HttpError(403, '只允许本机访问');
     // 防跨站请求：写操作必须带自定义请求头（浏览器跨站发不出这个头）
-    if (method !== 'GET' && req.headers['x-gongpai'] !== '1') throw new HttpError(403, '缺少请求头');
+    if (method !== 'GET' && req.headers['x-corpus'] !== '1') throw new HttpError(403, '缺少请求头');
 
     if (method === 'GET' && STATIC[url.pathname]) {
       const file = STATIC[url.pathname];
@@ -269,6 +269,6 @@ export function serve(db: Db, port: number) {
     });
   });
   server.requestTimeout = 15 * 60_000; // 整理一次可能要几分钟
-  server.listen(port, '127.0.0.1', () => console.log(`工牌已打开：http://127.0.0.1:${port}`));
+  server.listen(port, '127.0.0.1', () => console.log(`Working Corpus 已打开：http://127.0.0.1:${port}`));
   return server;
 }

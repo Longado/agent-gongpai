@@ -1,6 +1,8 @@
 // 用真模型跑六个样本，对照预期。硬红线有一条没过就算失败。
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { openDb } from './db.ts';
+import { evalDir } from './config.ts';
 import { loadSample } from './samples.ts';
 import { extractProject, PROMPT_VERSION } from './extract/run.ts';
 import type { ModelCall } from './extract/model.ts';
@@ -21,7 +23,7 @@ export interface SampleReport {
 
 export async function runEval(model: ModelCall, only?: string): Promise<{ reports: SampleReport[]; outDir: string }> {
   const dirs = readdirSync(SAMPLES).filter((d) => /^S\d/.test(d) && (!only || d.startsWith(only)));
-  const outDir = `data/eval/${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  const outDir = join(evalDir(), new Date().toISOString().replace(/[:.]/g, '-'));
   mkdirSync(outDir, { recursive: true });
   const reports = await Promise.all(dirs.map(async (dir) => {
     const t0 = Date.now();

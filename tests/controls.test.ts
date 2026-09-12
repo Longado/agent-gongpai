@@ -10,7 +10,7 @@ import { syncClaudeCode } from '../src/ingest/claude-code.ts';
 import { serve } from '../src/server.ts';
 
 test('暂停采集后不再读新对话，已有数据保留；恢复后继续', () => {
-  const root = mkdtempSync(join(tmpdir(), 'gongpai-pause-'));
+  const root = mkdtempSync(join(tmpdir(), 'corpus-pause-'));
   mkdirSync(join(root, '-code-ledger'));
   copyFileSync(new URL('./fixtures/cc-sample.jsonl', import.meta.url), join(root, '-code-ledger', 's.jsonl'));
   const db = openDb(':memory:');
@@ -31,7 +31,7 @@ test('没有同意发送之前，同步接口不调用远程模型', async () =>
   after(() => server.close());
   const port = (server.address() as AddressInfo).port;
   const post = (path: string) => new Promise<number>((resolve) => {
-    const r = http.request({ host: '127.0.0.1', port, path, method: 'POST', headers: { host: `127.0.0.1:${port}`, 'x-gongpai': '1' } }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode!)); });
+    const r = http.request({ host: '127.0.0.1', port, path, method: 'POST', headers: { host: `127.0.0.1:${port}`, 'x-corpus': '1' } }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode!)); });
     r.end();
   });
   assert.equal(await post(`/api/projects/${pid}/sync`), 428);

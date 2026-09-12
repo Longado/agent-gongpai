@@ -35,7 +35,7 @@ function pick<T extends { name: string }>(items: T[], query: string, ids: (t: T)
 
 function projectListing(db: Db): string {
   const projects = db.listProjects();
-  if (!projects.length) return '还没有项目。先在终端运行 npm run gongpai -- project add "项目名" --dir <代码目录> 建一个。';
+  if (!projects.length) return '还没有项目。先在终端运行 npm run corpus -- project add "项目名" --dir <代码目录> 建一个。';
   return projects.map((p) => `- ${p.name}（${p.id}）${p.dirs.length ? `：${p.dirs.join('，')}` : '：没有绑定目录'}`).join('\n');
 }
 
@@ -68,7 +68,7 @@ function projectStatus(db: Db, projectId: string): string {
     ...(cancelled.length ? ['不要做（已取消）：', ...cancelled.map((t) => `- ${shortId(t.id)} ${t.name} — ${t.basisNote}`)] : []),
     '下一步：',
     ...(view.next.length ? view.next.map((n, i) => `${i + 1}. ${n.action}（${n.reason}）`) : ['- 暂无建议']),
-    `待确认：${view.pending.length} 条${view.pending.length ? '，请到工牌页面上处理' : ''}`,
+    `待确认：${view.pending.length} 条${view.pending.length ? '，请到 Working Corpus 页面上处理' : ''}`,
     '提醒：AI 自述完成只算待验证，用户确认了才算完成。要接着做某个任务，调用 continue_context 并传任务编号。',
   ].join('\n');
 }
@@ -89,7 +89,7 @@ const projectArg = z.string().min(1).optional().describe('项目名或编号。�
 const TOOLS = [
   {
     name: 'list_projects',
-    description: '列出 Agent 工牌里的全部项目：名称、编号、绑定的代码目录。不确定当前项目叫什么时先调这个。',
+    description: '列出 Working Corpus 里的全部项目：名称、编号、绑定的代码目录。不确定当前项目叫什么时先调这个。',
     args: z.object({}),
     run: (db: Db) => text(projectListing(db)),
   },
@@ -138,7 +138,7 @@ export function handleMcp(db: Db, msg: unknown, ctx: { cwd: string }): McpRespon
         return ok(id, {
           protocolVersion: typeof params.protocolVersion === 'string' ? params.protocolVersion : DEFAULT_PROTOCOL,
           capabilities: { tools: {} },
-          serverInfo: { name: 'agent-gongpai', version: VERSION },
+          serverInfo: { name: 'working-corpus', version: VERSION },
         });
       case 'ping':
         return ok(id, {});

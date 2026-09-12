@@ -22,7 +22,7 @@ test('只保留真实对话，过滤注入的说明、环境信息和 developer 
 });
 
 function setup() {
-  const root = mkdtempSync(join(tmpdir(), 'gongpai-cx-'));
+  const root = mkdtempSync(join(tmpdir(), 'corpus-cx-'));
   const day = join(root, 'sessions', '2026', '09', '11');
   mkdirSync(day, { recursive: true });
   const file = join(day, 'rollout-2026-09-11T10-00-00-019a-cx-1.jsonl');
@@ -45,7 +45,7 @@ test('同步两次不重复，标题取自会话索引，追加一行多一条',
 
 test('同一目录下的 Claude Code 和 Codex 会话归到同一个项目', () => {
   const { root, db, projectId } = setup();
-  const ccRoot = mkdtempSync(join(tmpdir(), 'gongpai-cc2-'));
+  const ccRoot = mkdtempSync(join(tmpdir(), 'corpus-cc2-'));
   mkdirSync(join(ccRoot, '-code-ledger'));
   copyFileSync(new URL('./fixtures/cc-sample.jsonl', import.meta.url), join(ccRoot, '-code-ledger', 'sess-cc-1.jsonl'));
   syncCodex(db, { root, resolveRoot: (d) => d });

@@ -17,7 +17,7 @@ function req(path: string, opts: { method?: string; body?: unknown; host?: strin
   return new Promise((resolve, reject) => {
     const data = opts.body ? JSON.stringify(opts.body) : undefined;
     const r = http.request({ host: '127.0.0.1', port, path, method: opts.method ?? 'GET', headers: {
-      host: opts.host ?? `127.0.0.1:${port}`, ...(opts.header === false ? {} : { 'x-gongpai': '1' }), ...(data ? { 'content-type': 'application/json' } : {}),
+      host: opts.host ?? `127.0.0.1:${port}`, ...(opts.header === false ? {} : { 'x-corpus': '1' }), ...(data ? { 'content-type': 'application/json' } : {}),
     } }, (res) => {
       let buf = '';
       res.on('data', (c) => (buf += c));
@@ -32,7 +32,7 @@ function req(path: string, opts: { method?: string; body?: unknown; host?: strin
 test('首页能打开', async () => {
   const r = await req('/');
   assert.equal(r.status, 200);
-  assert.match(r.body, /Agent 工牌/);
+  assert.match(r.body, /Working Corpus/);
 });
 
 test('外部主机名访问被拒绝（防 DNS 重绑定）', async () => {

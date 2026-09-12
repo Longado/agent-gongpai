@@ -1,6 +1,6 @@
 # MCP 连接器
 
-让 Claude Code、Codex、Cursor 这类支持 MCP 的工具直接读工牌里的项目现场和续接上下文，不用再开网页复制粘贴。
+让 Claude Code、Codex、Cursor 这类支持 MCP 的工具直接读 Working Corpus 里的项目现场和续接上下文，不用再开网页复制粘贴。
 
 连接器只读：不调用大模型，不改数据库。整理对话还是在网页上点"同步"，或者命令行 `sync`。
 
@@ -19,14 +19,14 @@
 
 ## 注册
 
-下面的 `<仓库>` 换成本仓库的绝对路径，比如 `/Users/你/agent-gongpai`。
+下面的 `<仓库>` 换成本仓库的绝对路径，比如 `/Users/你/working-corpus`。
 
-数据库默认用 `<仓库>/data/gongpai.db`，和从哪个目录启动无关。想用别的数据库，设环境变量 `GONGPAI_DB`。
+数据库默认用 `<仓库>/~/.working-corpus/corpus.db`，和从哪个目录启动无关。想用别的数据库，设环境变量 `CORPUS_DB`。
 
 ### Claude Code
 
 ```
-claude mcp add gongpai -- node --no-warnings --env-file-if-exists=<仓库>/.env <仓库>/src/cli.ts mcp
+claude mcp add corpus -- node --no-warnings --env-file-if-exists=<仓库>/.env <仓库>/src/cli.ts mcp
 ```
 
 默认只在当前项目里生效；想所有项目都能用，加 `--scope user`。
@@ -38,7 +38,7 @@ claude mcp add gongpai -- node --no-warnings --env-file-if-exists=<仓库>/.env 
 在 `~/.codex/config.toml` 里加：
 
 ```toml
-[mcp_servers.gongpai]
+[mcp_servers.corpus]
 command = "node"
 args = ["--no-warnings", "--env-file-if-exists=<仓库>/.env", "<仓库>/src/cli.ts", "mcp"]
 ```
@@ -52,7 +52,7 @@ args = ["--no-warnings", "--env-file-if-exists=<仓库>/.env", "<仓库>/src/cli
 ```json
 {
   "mcpServers": {
-    "gongpai": {
+    "corpus": {
       "command": "node",
       "args": ["--no-warnings", "--env-file-if-exists=<仓库>/.env", "<仓库>/src/cli.ts", "mcp"]
     }

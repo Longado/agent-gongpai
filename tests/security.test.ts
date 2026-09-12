@@ -17,7 +17,7 @@ after(() => server.close());
 function req(path: string, method = 'GET', body?: unknown): Promise<{ status: number; body: any }> {
   return new Promise((resolve) => {
     const data = body ? JSON.stringify(body) : undefined;
-    const r = http.request({ host: '127.0.0.1', port, path, method, headers: { host: `127.0.0.1:${port}`, 'x-gongpai': '1', ...(data ? { 'content-type': 'application/json' } : {}) } }, (res) => {
+    const r = http.request({ host: '127.0.0.1', port, path, method, headers: { host: `127.0.0.1:${port}`, 'x-corpus': '1', ...(data ? { 'content-type': 'application/json' } : {}) } }, (res) => {
       let buf = '';
       res.on('data', (c) => (buf += c));
       res.on('end', () => resolve({ status: res.statusCode!, body: JSON.parse(buf) }));

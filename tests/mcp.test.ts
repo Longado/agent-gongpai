@@ -22,7 +22,7 @@ test('initialize 回应客户端要的协议版本，没给就用默认', () => 
   assert.equal(r.id, 1);
   assert.equal(r.result.protocolVersion, '2025-03-26');
   assert.deepEqual(r.result.capabilities, { tools: {} });
-  assert.equal(r.result.serverInfo.name, 'agent-gongpai');
+  assert.equal(r.result.serverInfo.name, 'working-corpus');
   assert.equal(call('initialize', {}).result.protocolVersion, '2025-06-18');
 });
 
@@ -62,8 +62,8 @@ test('project_status 按名字找项目：规划、状态、不要做、提醒�
 test('project_status 不传项目时按当前目录推断；推断不出就报错并列出项目', () => {
   const d = openDb(':memory:');
   const [a] = loadDemo(d);
-  d.addProjectDir(a, '/gongpai-test/app');
-  const r = handleMcp(d, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'project_status', arguments: {} } }, { cwd: '/gongpai-test/app/src' }) as any;
+  d.addProjectDir(a, '/corpus-test/app');
+  const r = handleMcp(d, { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'project_status', arguments: {} } }, { cwd: '/corpus-test/app/src' }) as any;
   assert.ok(r.result.content[0].text.includes(`（${a}）`));
   const miss = tool('project_status');
   assert.equal(miss.isError, true);
@@ -98,15 +98,15 @@ test('参数缺失、未知项目返回 isError，不是协议错误', () => {
 });
 
 test('端到端：命令行 mcp 从 stdin 读、往 stdout 只写协议消息', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'gongpai-mcp-'));
+  const dir = mkdtempSync(join(tmpdir(), 'corpus-mcp-'));
   try {
-    const file = join(dir, 'gongpai.db');
+    const file = join(dir, 'corpus.db');
     const seeded = openDb(file);
     loadDemo(seeded);
     seeded.raw.close();
 
     const root = fileURLToPath(new URL('..', import.meta.url));
-    const child = spawn(process.execPath, ['--no-warnings', 'src/cli.ts', 'mcp'], { cwd: root, env: { ...process.env, GONGPAI_DB: file } });
+    const child = spawn(process.execPath, ['--no-warnings', 'src/cli.ts', 'mcp'], { cwd: root, env: { ...process.env, CORPUS_DB: file } });
     let out = '';
     child.stdout.on('data', (c) => (out += c));
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0' } } })}\n`);
@@ -119,7 +119,7 @@ test('端到端：命令行 mcp 从 stdin 读、往 stdout 只写协议消息', 
     assert.equal(code, 0);
     const lines = out.trim().split('\n').map((l) => JSON.parse(l));
     assert.equal(lines.length, 3);
-    assert.equal(lines[0].result.serverInfo.name, 'agent-gongpai');
+    assert.equal(lines[0].result.serverInfo.name, 'working-corpus');
     assert.deepEqual(lines[1], { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });
     assert.equal(lines[2].id, 2);
     assert.equal(lines[2].result.tools.length, 3);

@@ -1,4 +1,4 @@
-// Agent 工牌前端。不需要构建，直接由本地服务器提供。
+// Working Corpus 前端。不需要构建，直接由本地服务器提供。
 // 所有来自对话记录的文字都经过 esc() 转义，对话内容不可信。
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -18,7 +18,7 @@ const later = new Set(JSON.parse(sessionStorage.getItem('later') || '[]'));
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     method: opts.method ?? 'GET',
-    headers: { 'x-gongpai': '1', ...(opts.body ? { 'content-type': 'application/json' } : {}) },
+    headers: { 'x-corpus': '1', ...(opts.body ? { 'content-type': 'application/json' } : {}) },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({ error: '返回内容无法解析' }));
@@ -68,7 +68,7 @@ async function load() {
 function renderNav(r) {
   const pending = app.data?.view.pending.length ?? 0;
   $('#nav').innerHTML = `
-    <div class="brand">Agent 工牌 <small>项目记忆</small></div>
+    <div class="brand">Working Corpus <small>项目记忆</small></div>
     <div class="grp">项目</div>
     ${app.projects.map((p) => `<a href="#/p/${esc(p.id)}" class="${p.id === app.pid && r.page !== 'settings' ? 'on' : ''}">${esc(p.name)}${p.pending ? `<span class="cnt">${p.pending}</span>` : ''}</a>`).join('')}
     <div class="grp">需要处理</div>
@@ -269,7 +269,7 @@ function usageLine(u) {
 
 function renderWelcome() {
   return `<div class="stack" style="max-width:560px">
-    <h1 style="margin:0">Agent 工牌</h1>
+    <h1 style="margin:0">Working Corpus</h1>
     <p>你继续在 Claude Code、Codex、网页 AI 里干活。回来时，这里有一页有证据的项目现场：做到哪、卡在哪、下一步做什么。</p>
     <div class="blk"><div class="blk-t">先建一个项目</div><div class="stack">
       <label>名称<input type="text" id="np-n"></label><label>一句话目标<input type="text" id="np-g"></label>

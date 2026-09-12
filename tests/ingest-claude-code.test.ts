@@ -38,7 +38,7 @@ test('工具报错截短，凭证被替换', () => {
 });
 
 function setup() {
-  const root = mkdtempSync(join(tmpdir(), 'gongpai-cc-'));
+  const root = mkdtempSync(join(tmpdir(), 'corpus-cc-'));
   const projDir = join(root, '-code-ledger');
   mkdirSync(projDir);
   const file = join(projDir, 'sess-cc-1.jsonl');

@@ -1,8 +1,10 @@
-// 命令行入口：npm run gongpai -- <命令>
+// 命令行入口：npm run corpus -- <命令>
 import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
+import { dbPath, loadEnv } from './config.ts';
 import { openDb } from './db.ts';
 import { syncClaudeCode } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
@@ -14,7 +16,7 @@ import { buildContext } from './engine/context.ts';
 import { runEval, formatReport } from './eval.ts';
 import { STATUS_LABEL } from './contracts.ts';
 
-const HELP = `用法：npm run gongpai -- <命令>
+const HELP = `用法：npm run corpus -- <命令>
 
   project add <名称> --dir <目录> [--goal <目标>]   建项目并绑定目录（可多次 --dir）
   project list                                     列出项目
@@ -39,7 +41,12 @@ const { positionals, values } = parseArgs({
 });
 
 // 默认数据库跟着仓库走，不跟着当前目录：MCP 连接器是从别的目录启动的
-const db = () => openDb(process.env.GONGPAI_DB ?? fileURLToPath(new URL('../data/gongpai.db', import.meta.url)));
+loadEnv();
+const LEGACY_DB = fileURLToPath(new URL('../data/gongpai.db', import.meta.url));
+if (!process.env.CORPUS_DB && existsSync(LEGACY_DB) && !existsSync(dbPath())) {
+  console.error(`提示：旧版本的数据库在 ${LEGACY_DB}，新位置是 ${dbPath()}。需要旧数据的话手动移动过去。`);
+}
+const db = () => openDb(dbPath());
 const need = (v: string | undefined, name: string): string => {
   if (!v) { console.error(`缺少 --${name}\n\n${HELP}`); process.exit(2); }
   return v;
@@ -108,7 +115,7 @@ async function main() {
   } else if (cmd === 'demo') {
     const { loadDemo } = await import('./demo.ts');
     const ids = loadDemo(db());
-    console.log(`已建示例项目：${ids.join('、')}。运行 npm run gongpai -- serve 查看`);
+    console.log(`已建示例项目：${ids.join('、')}。运行 npm run corpus -- serve 查看`);
   } else if (cmd === 'eval') {
     console.log('用真模型跑样本，推理模型每批要几十秒……');
     const { reports, outDir } = await runEval(deepseek(), values.only);

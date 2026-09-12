@@ -21,9 +21,9 @@
 
 ## 环境和坑
 
-- 运行：Node 22.18+，`npm run gongpai -- help`。`.env` 放 `DEEPSEEK_API_KEY` 和 `GONGPAI_MODEL`，不提交。
+- 运行：Node 22.18+，`npm run corpus -- help`。`.env` 放 `DEEPSEEK_API_KEY` 和 `CORPUS_MODEL`，不提交。
 - Claude Code 命令行也可以当模型，但要 `env -u ANTHROPIC_API_KEY`，见 `docs/contracts.md`。
 - Node 直接跑 TypeScript，不支持构造函数参数属性、enum 这类要编译的语法（`erasableSyntaxOnly`）。
 - 全局 git pre-commit 钩子：同一个提交里既改已有测试文件、又改源码会被拦。新增测试文件不受影响。要改旧测试就单独提交。
-- 页面服务只监听 127.0.0.1；写操作必须带 `x-gongpai: 1` 请求头。
+- 页面服务只监听 127.0.0.1；写操作必须带 `x-corpus: 1` 请求头。
 - 第一次在页面上同步会弹出“发送说明”，同意后才调用模型；命令行 `extract` 直接整理，会打印一行说明。

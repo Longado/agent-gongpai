@@ -33,7 +33,7 @@
 
 ## 模型
 
-- 测试用 DeepSeek，`.env` 里的 `GONGPAI_MODEL` 固定版本，每条证据都记下模型和提示词版本。
+- 测试用 DeepSeek，`.env` 里的 `CORPUS_MODEL` 固定版本，每条证据都记下模型和提示词版本。
 - 备选：本机已登录的 Claude Code 也可以当模型，已验证可用：
   ```
   env -u ANTHROPIC_API_KEY claude -p --output-format json --no-session-persistence \

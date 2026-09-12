@@ -41,4 +41,5 @@ npm run gongpai -- eval      # 用真模型跑六个样本，硬红线有一条�
 - `docs/contracts.md`：各模块之间的约定和状态规则
 - `docs/EVAL.md`：每次改提示词或换模型的评估记录
 - `docs/DEMO.md`：演示脚本
+- `docs/MCP.md`：MCP 连接器，让 Claude Code、Codex、Cursor 直接读项目现场
 - `prompts/evidence.md`：唯一的提示词，文件头有版本号

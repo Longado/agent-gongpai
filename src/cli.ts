@@ -2,6 +2,7 @@
 import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { openDb } from './db.ts';
 import { syncClaudeCode } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
@@ -24,6 +25,7 @@ const HELP = `用法：npm run gongpai -- <命令>
   show --project <编号>                             打印项目现场
   context --project <编号> --task <T01>              打印续接上下文
   serve [--port 4173]                              打开本地网页
+  mcp                                              以 MCP 连接器方式运行（stdio），给 Claude Code、Codex、Cursor 读项目现场，见 docs/MCP.md
   eval [--only S1]                                 用真模型跑样本评估
   demo                                             用样本数据建两个示例项目（不调用模型）`;
 
@@ -36,7 +38,8 @@ const { positionals, values } = parseArgs({
   },
 });
 
-const db = () => openDb(process.env.GONGPAI_DB ?? 'data/gongpai.db');
+// 默认数据库跟着仓库走，不跟着当前目录：MCP 连接器是从别的目录启动的
+const db = () => openDb(process.env.GONGPAI_DB ?? fileURLToPath(new URL('../data/gongpai.db', import.meta.url)));
 const need = (v: string | undefined, name: string): string => {
   if (!v) { console.error(`缺少 --${name}\n\n${HELP}`); process.exit(2); }
   return v;
@@ -99,6 +102,9 @@ async function main() {
   } else if (cmd === 'serve') {
     const { serve } = await import('./server.ts');
     serve(db(), Number(values.port ?? 4173));
+  } else if (cmd === 'mcp') {
+    const { runMcp } = await import('./mcp.ts'); // stdout 只留给协议消息，这里不能打印任何东西
+    runMcp(db());
   } else if (cmd === 'demo') {
     const { loadDemo } = await import('./demo.ts');
     const ids = loadDemo(db());

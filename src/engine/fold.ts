@@ -97,13 +97,19 @@ export function fold(input: FoldInput): FoldOutput {
   // 规划版本
   const versions: PlanVersion[] = [];
   let sealed = false; // 第一版在出现第一次变更时封口
-  const planChange = (s: State, change: 'added' | 'cancelled', at: string, evId: string) => {
+  const versionCites = new Map<PlanVersion, Set<string>>(); // 每一版引用过的消息
+  const planChange = (s: State, change: 'added' | 'cancelled', at: string, evId: string, cite: string[]) => {
     const last = versions.at(-1);
     let v = last;
-    if (!last || last.at !== at) {
+    // 同一次决定：时间相同，或者和上一版的变更引用了同一条消息
+    // 第一版不参与“同引用”合并，免得后来的变更顺手引用了最初规划就被并进第一版
+    const sameMoment = !!last && (last.at === at || (last.n > 1 && cite.some((id) => versionCites.get(last)?.has(id))));
+    if (!last || !sameMoment) {
       v = { n: versions.length + 1, at, backfilled: false, items: (last?.items ?? []).filter((i) => i.change !== 'cancelled').map((i) => ({ ...i, change: 'kept' as const })), evidenceIds: [] };
       versions.push(v);
     }
+    if (!versionCites.has(v!)) versionCites.set(v!, new Set());
+    cite.forEach((id) => versionCites.get(v!)!.add(id));
     const item = v!.items.find((i) => i.taskId === s.rec.id);
     if (change === 'added' && !item) v!.items.push({ taskId: s.rec.id, name: s.name, change: versions.length === 1 ? 'kept' : 'added' });
     if (change === 'cancelled' && item) item.change = 'cancelled';
@@ -193,13 +199,13 @@ export function fold(input: FoldInput): FoldOutput {
           if (!v1.evidenceIds.includes(e.id)) v1.evidenceIds.push(e.id);
         } else {
           if (versions.length > 0) sealed = true;
-          planChange(s, 'added', e.at, e.id);
+          planChange(s, 'added', e.at, e.id, e.cite);
         }
         s.inPlan = true;
         if (s.status === null || s.status === 'cancelled') target = { to: 'todo', basis: 'user', note: s.status === 'cancelled' ? '重新加入规划' : '规划里有，还没发现执行记录' };
         break;
       case 'plan_cancel':
-        if (s.inPlan) { sealed = true; planChange(s, 'cancelled', e.at, e.id); }
+        if (s.inPlan) { sealed = true; planChange(s, 'cancelled', e.at, e.id, e.cite); }
         out.decisions.push({ evidenceId: e.id, kind: 'cancel', text: `取消「${s.name}」`, reason: e.reason, at: e.at });
         target = { to: 'cancelled', basis: 'user', note: `${day(e.at)} 你决定不做${e.reason ? `：${e.reason}` : ''}` };
         break;

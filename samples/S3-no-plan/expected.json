@@ -1,0 +1,12 @@
+{
+  "tasks": [
+    { "match": ["首页"], "status": "to_verify" },
+    { "match": ["表单"], "status": "to_verify" },
+    { "match": ["导航"], "status": "to_verify" }
+  ],
+  "taskCount": 3,
+  "plan": { "versions": 0, "noPlan": true },
+  "notRecommended": [],
+  "doneEvents": 0,
+  "coverageWarning": false
+}

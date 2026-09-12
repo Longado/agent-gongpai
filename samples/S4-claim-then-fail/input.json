@@ -1,0 +1,17 @@
+{
+  "project": { "name": "记账小程序", "goal": "做一个记账小程序" },
+  "sessions": [
+    { "id": "cc-1", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m1", "role": "user", "text": "实现月度导出，导出成表格文件。", "ts": "2026-09-10T10:00:00+08:00" },
+      { "ref": "m2", "role": "assistant", "text": "月度导出已完成，文件生成在 exports 目录。", "ts": "2026-09-10T10:40:00+08:00" }
+    ]},
+    { "id": "cx-1", "source": "codex", "label": "Codex", "coverage": "full", "messages": [
+      { "ref": "m3", "role": "user", "text": "导出的文件打不开，提示格式错误。", "ts": "2026-09-11T18:00:00+08:00" },
+      { "ref": "m4", "role": "assistant", "text": "是编码问题，已经改成 UTF-8 带 BOM，修好了。", "ts": "2026-09-11T18:30:00+08:00" }
+    ]},
+    { "id": "cc-2", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m5", "role": "user", "text": "再导出一次看看。", "ts": "2026-09-12T20:00:00+08:00" },
+      { "ref": "m6", "role": "assistant", "text": "重新导出成功，这次文件应该可以正常打开了。", "ts": "2026-09-12T20:15:00+08:00" }
+    ]}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "tasks": [
+    { "match": ["录入"], "status": "todo" },
+    { "match": ["导出"], "status": "doing" },
+    { "match": ["海报"], "status": "cancelled" }
+  ],
+  "taskCount": 3,
+  "plan": { "versions": 2, "noPlan": false },
+  "notRecommended": ["海报"],
+  "firstNext": ["导出"],
+  "context": { "task": ["导出"], "doNotSection": ["海报"], "thisRoundExcludes": ["海报"] },
+  "doneEvents": 0,
+  "coverageWarning": false
+}

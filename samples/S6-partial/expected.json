@@ -1,0 +1,7 @@
+{
+  "tasks": [ { "match": ["统计"], "status": "doing" } ],
+  "notRecommended": [],
+  "doneEvents": 0,
+  "coverageWarning": true,
+  "note": "前文未加载。用户只回了一句“好”，AI 总结的方案算不算确认有歧义，这里不检查规划，只检查覆盖提示。"
+}

@@ -1,0 +1,10 @@
+{
+  "project": { "name": "记账小程序", "goal": "做一个记账小程序" },
+  "sessions": [
+    { "id": "gem-1", "source": "import", "label": "Gemini 网页", "coverage": "partial", "messages": [
+      { "ref": "m1", "role": "assistant", "text": "……以上就是我们确定的方案，包括统计、导出和提醒三部分。", "ts": null, "capturedAt": "2026-09-12T16:00:00+08:00" },
+      { "ref": "m2", "role": "user", "text": "好，那先做分类统计。", "ts": null, "capturedAt": "2026-09-12T16:01:00+08:00" },
+      { "ref": "m3", "role": "assistant", "text": "分类统计页面分三块：本月合计、分类占比、明细列表。我先把数据查询写出来。", "ts": null, "capturedAt": "2026-09-12T16:02:00+08:00" }
+    ]}
+  ]
+}

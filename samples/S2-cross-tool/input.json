@@ -1,0 +1,17 @@
+{
+  "project": { "name": "记账小程序", "goal": "做一个记账小程序" },
+  "sessions": [
+    { "id": "cx-1", "source": "codex", "label": "Codex", "coverage": "full", "messages": [
+      { "ref": "m1", "role": "user", "text": "实现登录功能，用微信授权登录。", "ts": "2026-09-09T10:00:00+08:00" },
+      { "ref": "m2", "role": "assistant", "text": "登录功能已经实现，调用了微信授权接口。", "ts": "2026-09-09T10:30:00+08:00" }
+    ]},
+    { "id": "cc-1", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m3", "role": "user", "text": "登录报错，提示 code 无效。", "ts": "2026-09-10T09:00:00+08:00" },
+      { "ref": "m4", "role": "assistant", "text": "原因是 code 过期后没有重新获取，已修复。", "ts": "2026-09-10T09:20:00+08:00" }
+    ]},
+    { "id": "cc-2", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m5", "role": "user", "text": "给登录补一下测试。", "ts": "2026-09-10T11:00:00+08:00" },
+      { "ref": "m6", "role": "assistant", "text": "补了登录接口的单元测试，全部通过。只覆盖接口层，没有测页面上的授权流程。", "ts": "2026-09-10T11:30:00+08:00" }
+    ]}
+  ]
+}

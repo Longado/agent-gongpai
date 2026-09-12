@@ -1,0 +1,17 @@
+{
+  "project": { "name": "记账小程序", "goal": "做一个能记账、按分类统计、每月导出的微信小程序" },
+  "sessions": [
+    { "id": "gem-1", "source": "import", "label": "Gemini 网页", "coverage": "full", "messages": [
+      { "ref": "m1", "role": "user", "text": "我想做一个记账小程序，第一版要有：记账录入、分类统计、月度导出、云同步。", "ts": null, "capturedAt": "2026-09-08T10:00:00+08:00" },
+      { "ref": "m2", "role": "assistant", "text": "好的，第一版范围是记账录入、分类统计、月度导出、云同步。另外建议加一个预算提醒。", "ts": null, "capturedAt": "2026-09-08T10:01:00+08:00" },
+      { "ref": "m3", "role": "user", "text": "预算提醒先不要，就这四个。", "ts": null, "capturedAt": "2026-09-08T10:02:00+08:00" }
+    ]},
+    { "id": "cc-1", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m4", "role": "user", "text": "开始做记账录入页面。", "ts": "2026-09-09T14:00:00+08:00" },
+      { "ref": "m5", "role": "assistant", "text": "已创建记账录入页面，数据先存在本地。", "ts": "2026-09-09T14:20:00+08:00" },
+      { "ref": "m6", "role": "user", "text": "录入我试过了，可以用。", "ts": "2026-09-09T15:00:00+08:00" },
+      { "ref": "m7", "role": "user", "text": "云同步先不做了，改成本地备份，因为先不做账号体系。", "ts": "2026-09-11T09:00:00+08:00" },
+      { "ref": "m8", "role": "assistant", "text": "明白，计划里去掉云同步，新增本地备份。", "ts": "2026-09-11T09:01:00+08:00" }
+    ]}
+  ]
+}

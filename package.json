@@ -1,0 +1,20 @@
+{
+  "name": "agent-gongpai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "把你在各个 AI 工具里的对话整理成一页有证据的项目现场",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "test": "node --no-warnings --test \"tests/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "gongpai": "node --no-warnings --env-file-if-exists=.env src/cli.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "^5.9.0"
+  }
+}

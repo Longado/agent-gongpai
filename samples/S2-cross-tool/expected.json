@@ -1,0 +1,8 @@
+{
+  "tasks": [ { "match": ["登录"], "status": "to_verify", "minSessions": 3 } ],
+  "taskCount": 1,
+  "plan": { "versions": 0, "noPlan": true },
+  "notRecommended": [],
+  "doneEvents": 0,
+  "coverageWarning": false
+}

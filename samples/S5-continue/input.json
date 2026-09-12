@@ -1,0 +1,14 @@
+{
+  "project": { "name": "记账小程序", "goal": "做一个记账小程序" },
+  "sessions": [
+    { "id": "gem-1", "source": "import", "label": "Gemini 网页", "coverage": "full", "messages": [
+      { "ref": "m1", "role": "user", "text": "第一版规划：记账录入、月度导出、分享海报。", "ts": null, "capturedAt": "2026-09-08T09:00:00+08:00" },
+      { "ref": "m2", "role": "assistant", "text": "好的，按这三项推进。", "ts": null, "capturedAt": "2026-09-08T09:01:00+08:00" }
+    ]},
+    { "id": "cc-1", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m3", "role": "user", "text": "分享海报不做了。", "ts": "2026-09-10T09:00:00+08:00" },
+      { "ref": "m4", "role": "user", "text": "开始做月度导出。", "ts": "2026-09-10T09:05:00+08:00" },
+      { "ref": "m5", "role": "assistant", "text": "导出做了一半，数据查询写好了，还差表头格式。", "ts": "2026-09-10T10:00:00+08:00" }
+    ]}
+  ]
+}

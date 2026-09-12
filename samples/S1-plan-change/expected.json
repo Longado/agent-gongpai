@@ -1,0 +1,15 @@
+{
+  "tasks": [
+    { "match": ["录入"], "status": "done" },
+    { "match": ["统计"], "status": "todo" },
+    { "match": ["导出"], "status": "todo" },
+    { "match": ["备份"], "status": "todo" },
+    { "match": ["云同步", "同步"], "status": "cancelled" }
+  ],
+  "taskCount": 5,
+  "absentTasks": ["预算"],
+  "plan": { "versions": 2, "noPlan": false },
+  "notRecommended": ["同步", "预算"],
+  "doneEvents": 1,
+  "coverageWarning": false
+}

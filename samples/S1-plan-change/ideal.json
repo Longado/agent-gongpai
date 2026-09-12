@@ -1,0 +1,136 @@
+{
+ "evidence": [
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含记账录入"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "分类统计"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含分类统计"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含月度导出"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "云同步"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含云同步"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "预算提醒"
+   },
+   "kind": "plan_add",
+   "cite": [
+    "m2"
+   ],
+   "detail": "AI 建议加预算提醒"
+  },
+  {
+   "reasoning": "按原文",
+   "task": "none",
+   "kind": "decision_reject",
+   "cite": [
+    "m3"
+   ],
+   "detail": "不做预算提醒"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "started",
+   "cite": [
+    "m4"
+   ],
+   "detail": "开始做录入页面"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m5"
+   ],
+   "detail": "AI 说录入页面已创建"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "user_confirms_done",
+   "cite": [
+    "m6"
+   ],
+   "detail": "用户试过，可以用"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "云同步"
+   },
+   "kind": "plan_cancel",
+   "cite": [
+    "m7"
+   ],
+   "detail": "云同步不做了",
+   "reason": "先不做账号体系"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "本地备份"
+   },
+   "kind": "plan_add",
+   "cite": [
+    "m7"
+   ],
+   "detail": "新增本地备份",
+   "reason": "先不做账号体系"
+  },
+  {
+   "reasoning": "按原文",
+   "task": "none",
+   "kind": "decision_adopt",
+   "cite": [
+    "m7",
+    "m8"
+   ],
+   "detail": "用本地备份替代云同步",
+   "reason": "先不做账号体系"
+  }
+ ]
+}

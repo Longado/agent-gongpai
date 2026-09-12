@@ -1,0 +1,60 @@
+{
+ "evidence": [
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含记账录入"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含月度导出"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "分享海报"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含分享海报"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "分享海报"
+   },
+   "kind": "plan_cancel",
+   "cite": [
+    "m3"
+   ],
+   "detail": "分享海报不做了"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "started",
+   "cite": [
+    "m4",
+    "m5"
+   ],
+   "detail": "导出做了一半，还差表头格式"
+  }
+ ]
+}

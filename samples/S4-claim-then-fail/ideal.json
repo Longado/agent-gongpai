@@ -1,0 +1,70 @@
+{
+ "evidence": [
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "started",
+   "cite": [
+    "m1"
+   ],
+   "detail": "实现月度导出"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m2"
+   ],
+   "detail": "AI 说导出已完成"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "failure",
+   "cite": [
+    "m3"
+   ],
+   "detail": "文件打不开，格式错误"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m4"
+   ],
+   "detail": "AI 说编码问题已修好"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "started",
+   "cite": [
+    "m5"
+   ],
+   "detail": "再导出一次验证"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m6"
+   ],
+   "detail": "AI 说重新导出成功"
+  }
+ ]
+}

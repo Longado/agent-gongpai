@@ -158,6 +158,9 @@ export function openDb(path: string) {
         }
       });
     },
+    evidenceCount(projectId: string): number {
+      return Number(get('SELECT COUNT(*) AS c FROM evidence WHERE project_id = ?', projectId)?.c ?? 0);
+    },
     evidenceForProject(projectId: string): StoredEvidence[] {
       return all('SELECT * FROM evidence WHERE project_id = ? ORDER BY at, ord', projectId).map(toEvidence);
     },
@@ -185,6 +188,12 @@ export function openDb(path: string) {
       return all('SELECT * FROM corrections WHERE project_id = ? ORDER BY at, id', projectId).map((r) => ({
         id: r.id as string, projectId: r.project_id as string, at: r.at as string, correction: JSON.parse(r.body as string),
       }));
+    },
+
+    /** 改正导入对话里认错的发言者。改的是原始记录，同时留一条修正记录。 */
+    setMessageRole(projectId: string, messageId: string, role: Role) {
+      run('UPDATE messages SET role = ? WHERE id = ?', role, messageId);
+      this.addCorrection(projectId, { type: 'set_role', messageId, role });
     },
 
     logUsage(projectId: string | null, kind: string) {

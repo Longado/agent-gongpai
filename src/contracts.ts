@@ -103,7 +103,8 @@ export type Correction =
   | { type: 'assign'; evidenceId: string; taskId: string }
   | { type: 'confirm_condition'; taskId: string; condition: string }
   | { type: 'dismiss_next'; key: string }
-  | { type: 'backfill_plan'; items: string[] };
+  | { type: 'backfill_plan'; taskIds: string[] }
+  | { type: 'set_role'; messageId: string; role: Role };
 
 export interface CorrectionRecord {
   id: string;
@@ -209,4 +210,14 @@ export interface ProjectView {
   counts: Record<TaskStatus, number>;
   doneEvents: { at: string; taskId: string }[]; // 每次进入已完成记一次，按天统计由页面做
   coverageWarning: boolean; // 有来源只读到一部分
+  lastPosition: LastPosition | null;
+}
+
+export interface LastPosition {
+  at: string;
+  sessionId: string;
+  label: string;
+  title: string | null;
+  text: string;
+  taskId: string | null;
 }

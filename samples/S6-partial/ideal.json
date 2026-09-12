@@ -1,0 +1,49 @@
+{
+ "evidence": [
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "分类统计"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "AI 提到方案包括统计"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "AI 提到方案包括导出"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "提醒"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "AI 提到方案包括提醒"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "分类统计"
+   },
+   "kind": "started",
+   "cite": [
+    "m2",
+    "m3"
+   ],
+   "detail": "先做分类统计，AI 开始写数据查询"
+  }
+ ]
+}

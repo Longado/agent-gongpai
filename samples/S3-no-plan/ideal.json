@@ -1,0 +1,70 @@
+{
+ "evidence": [
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "首页"
+   },
+   "kind": "started",
+   "cite": [
+    "m1"
+   ],
+   "detail": "做首页"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "首页"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m2"
+   ],
+   "detail": "AI 说首页做好了"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账表单"
+   },
+   "kind": "started",
+   "cite": [
+    "m3"
+   ],
+   "detail": "加记账表单"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账表单"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m4"
+   ],
+   "detail": "AI 说表单已添加"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "底部导航"
+   },
+   "kind": "started",
+   "cite": [
+    "m5"
+   ],
+   "detail": "导航改成底部三个标签"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "底部导航"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m6"
+   ],
+   "detail": "AI 说导航已调整"
+  }
+ ]
+}

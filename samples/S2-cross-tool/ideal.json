@@ -1,0 +1,70 @@
+{
+ "evidence": [
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "started",
+   "cite": [
+    "m1"
+   ],
+   "detail": "要求实现微信授权登录"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m2"
+   ],
+   "detail": "AI 说登录已实现"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "failure",
+   "cite": [
+    "m3"
+   ],
+   "detail": "登录报错，code 无效"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m4"
+   ],
+   "detail": "AI 说已修复 code 过期问题"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "started",
+   "cite": [
+    "m5"
+   ],
+   "detail": "补登录测试"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m6"
+   ],
+   "detail": "接口测试通过，页面授权流程没测"
+  }
+ ]
+}

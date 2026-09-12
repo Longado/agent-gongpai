@@ -110,7 +110,8 @@ export function openDb(path: string) {
       run('UPDATE sessions SET cursor = ? WHERE id = ?', cursor, sessionId);
     },
     setExtractedUpto(sessionId: string, seq: number) {
-      run('UPDATE sessions SET extracted_upto = ? WHERE id = ?', seq, sessionId);
+      // 只能前进：已整理的位置不会因为处理顺序而倒退
+      run('UPDATE sessions SET extracted_upto = MAX(extracted_upto, ?) WHERE id = ?', seq, sessionId);
     },
 
     /** 按来源编号去重写入，返回新增条数。 */

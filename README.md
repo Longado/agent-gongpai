@@ -58,6 +58,16 @@ npm run gongpai -- serve                               # 在页面上点"同步"
 
 网页 AI 的对话在"接入设置"里粘贴导入，用"你：""Gemini："这样的开头区分发言者；只复制了一部分就勾上"只复制了一部分"，工牌不会拿缺失的前文下结论。
 
+## 在 AI 工具里直接取
+
+不想复制粘贴，就把工牌接到 AI 工具上。它提供三个只读工具：列出项目、看项目现场、生成某个任务的续接上下文。在 Claude Code 里注册：
+
+```
+claude mcp add gongpai -- node --no-warnings --env-file-if-exists=<仓库>/.env <仓库>/src/cli.ts mcp
+```
+
+之后在对话里说"先看一下工牌里的项目现场，然后按续接上下文继续做 T03"就行。Codex 和 Cursor 的配置见 `docs/MCP.md`。
+
 ## 它是怎么工作的
 
 ```
@@ -90,7 +100,7 @@ MVP。已经能用，也有明确的边界：
 - 六个样本场景的评估，硬红线从没失败过；用 `deepseek-flash` 整理一个 74 条消息的真实项目约 2 分钟。评估记录在 `docs/EVAL.md`。样本少，只说明这几种场景没出错，不代表真实对话里的准确率。
 - 暂不支持：Cursor、Gemini 浏览器扩展、后台自动同步、团队协作。
 - 已知限制：编排工具（比如 Orca）派给 worker 的指令在会话记录里是“用户”身份，会被当成你说的话，只影响“开始执行”这类判断，不会让任务变成已完成；Codex 的工具报错、Claude Code 子 agent 的会话暂时不读。
-- 下一步：MCP 连接器，让 AI 工具在对话里直接取项目现场和续接上下文。为什么是网页加连接器而不是插件，见 `docs/FORM.md`。
+- 已有 MCP 连接器，在 Claude Code 和 Codex 里实测可用；Cursor 的配置写在文档里，没有在本机实测。为什么是网页加连接器而不是插件，见 `docs/FORM.md`。
 
 ## 开发
 
@@ -106,6 +116,7 @@ npm run gongpai -- eval      # 用真模型跑六个样本，硬红线有一条�
 | `docs/contracts.md` | 模块之间的约定、状态规则 |
 | `docs/EVAL.md` | 每次改提示词或换模型的评估记录 |
 | `docs/FORM.md` | 形态研判：插件还是网页 |
+| `docs/MCP.md` | MCP 连接器：在 Claude Code、Codex、Cursor 里直接取项目现场 |
 | `docs/DEMO.md` | 演示脚本 |
 | `docs/HANDOFF.md` | 交接：现在到哪了、下一步 |
 | `prompts/evidence.md` | 唯一的提示词，文件头有版本号 |

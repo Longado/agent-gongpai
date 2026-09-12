@@ -27,7 +27,7 @@ export function buildContext(db: Db, projectId: string, taskId: string): string 
   const sessionOf = new Map(db.messagesForProject(projectId).map((m) => [m.id, m.sessionId]));
   const citeOf = new Map(db.evidenceForProject(projectId).map((e) => [e.id, e.cite]));
   const related = (evId: string) => (citeOf.get(evId) ?? []).some((id) => task.sessions.includes(sessionOf.get(id) ?? ''));
-  const decisions = view.decisions.filter((d) => d.kind !== 'cancel' && related(d.evidenceId)).slice(-5)
+  const decisions = view.decisions.filter((d) => d.kind !== 'cancel' && !d.supersededBy && related(d.evidenceId)).slice(-5)
     .map((d) => `- ${d.kind === 'adopt' ? '采用' : '否决'}：${d.text}（原因：${d.reason ?? '未说明'}）`);
   const sessions = task.sessions.map((sid) => db.getSession(sid)).filter((s) => !!s).map((s) => `${s!.label}${s!.title ? `「${s!.title}」` : ''}`);
   const history = task.history.slice(-5).map((h) => `- ${h.at.slice(0, 10)} ${STATUS_LABEL[h.to]}：${h.note}`);

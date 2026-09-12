@@ -21,7 +21,7 @@ export function storeEvidence(
   projectId: string,
   items: unknown[],
   refs: Map<string, Message>,
-  meta: { model: string; promptVersion: string; batchKey?: string },
+  meta: { model: string; promptVersion: string; batchKey?: string; decisionRefs?: Map<string, string> },
 ): { stored: StoredEvidence[]; dropped: Dropped[] } {
   const stored: StoredEvidence[] = [];
   const dropped: Dropped[] = [];
@@ -64,9 +64,16 @@ export function storeEvidence(
       }
     }
 
+    // 被替代的决定：本批的消息编号或提示词里的决定编号；认不出的引用丢掉，不影响这条证据
+    const replaces = (e.replaces ?? []).flatMap((r) => {
+      const m = refs.get(r);
+      if (m) return [`m:${m.id}`];
+      const ev = meta.decisionRefs?.get(r);
+      return ev ? [`e:${ev}`] : [];
+    });
     stored.push({
       id: `e_${randomUUID().slice(0, 8)}`, projectId, taskId, kind: e.kind, cite: msgs.map((m) => m.id), speaker,
-      detail, reason: e.reason?.trim() || null, at, order: base + i, downgraded: null, model: meta.model, promptVersion: meta.promptVersion,
+      detail, reason: e.reason?.trim() || null, at, order: base + i, downgraded: null, replaces, model: meta.model, promptVersion: meta.promptVersion,
     });
   });
   db.addEvidence(stored, meta.batchKey ?? null);

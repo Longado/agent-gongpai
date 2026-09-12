@@ -1,0 +1,13 @@
+{
+  "project": { "name": "记账小程序", "goal": "做一个记账小程序" },
+  "sessions": [
+    { "id": "cc-1", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m1", "role": "user", "text": "数据先存在 SQLite 里，简单。", "ts": "2026-09-09T10:00:00+08:00" },
+      { "ref": "m2", "role": "assistant", "text": "好，用 SQLite 做本地存储。", "ts": "2026-09-09T10:01:00+08:00" }
+    ]},
+    { "id": "cc-2", "source": "claude_code", "label": "Claude Code", "coverage": "full", "messages": [
+      { "ref": "m3", "role": "user", "text": "SQLite 不够用了，改用 Postgres，因为要多人同时写。", "ts": "2026-09-11T10:00:00+08:00" },
+      { "ref": "m4", "role": "assistant", "text": "已切换到 Postgres，迁移脚本写好了。", "ts": "2026-09-11T10:30:00+08:00" }
+    ]}
+  ]
+}

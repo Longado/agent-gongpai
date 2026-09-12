@@ -12,6 +12,7 @@ export function loadDemo(db: Db, samples = ['S1-plan-change', 'S4-claim-then-fai
     db.raw.prepare('UPDATE projects SET name = ? WHERE id = ?').run(`示例 · ${sample.project.name} · ${dir.split('-')[0]}`, projectId);
     const ideal = JSON.parse(readFileSync(new URL(`${dir}/ideal.json`, SAMPLES), 'utf8'));
     storeEvidence(db, projectId, ideal.evidence, refs, { model: 'demo', promptVersion: 'ideal' });
+    db.sessionsForProject(projectId).forEach((s) => db.setExtractedUpto(s.id, db.maxSeq(s.id))); // 示例数据算已整理
     return projectId;
   });
 }

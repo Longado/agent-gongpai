@@ -11,6 +11,7 @@ export interface Expected {
   doneEvents?: number;
   coverageWarning?: boolean;
   context?: { task: string[]; doNotSection?: string[]; thisRoundExcludes?: string[] };
+  decisions?: { match: string[]; superseded: boolean }[];
 }
 
 export interface CheckResult {
@@ -54,6 +55,10 @@ export function checkExpected(view: ProjectView, exp: Expected, contextFor: (tas
       for (const w of exp.context.doNotSection ?? []) r.push({ check: `续接上下文的“不要做”里有「${w}」`, pass: doNot.includes(w), detail: doNot });
       for (const w of exp.context.thisRoundExcludes ?? []) r.push({ check: `“本轮请做”里没有「${w}」`, pass: !round.includes(w), detail: round, redLine: true });
     }
+  }
+  for (const d of exp.decisions ?? []) {
+    const got = view.decisions.find((x) => hits(x.text, d.match));
+    r.push({ check: `决定「${d.match[0]}」${d.superseded ? '已被替代' : '仍然有效'}`, pass: !!got && !!got.supersededBy === d.superseded, detail: got ? `实际${got.supersededBy ? '已被替代' : '仍然有效'}` : `没找到，现有：${view.decisions.map((x) => x.text).join('、')}` });
   }
   // 硬红线：任何“已完成”都必须来自用户确认或人工修正，AI 自述永远不算
   const badDone = view.tasks.filter((t) => t.history.some((h) => h.to === 'done' && h.basis !== 'user' && h.basis !== 'manual'));

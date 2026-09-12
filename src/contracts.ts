@@ -63,6 +63,7 @@ export const Evidence = z.object({
   cite: z.array(z.string()).min(1), // 引用的消息编号（提示词里的短编号）
   detail: z.string(), // 一句话
   reason: z.string().optional(), // 决定、取消的原因；原文没说就不填，页面显示“未说明”
+  replaces: z.array(z.string()).optional(), // 新决定推翻了哪些旧决定：本批的消息编号（m3）或提示词里的决定编号（D2）
 });
 export type Evidence = z.infer<typeof Evidence>;
 
@@ -81,6 +82,7 @@ export interface StoredEvidence {
   at: string; // 被引用消息里最晚的时间，用来排序
   order: number; // 同一时间内的先后
   downgraded: string | null; // 被代码降级时写明原因
+  replaces?: string[]; // “e:<证据编号>”或“m:<消息编号>”；旧数据没有这个字段
   model: string;
   promptVersion: string;
 }
@@ -184,6 +186,7 @@ export interface Decision {
   text: string;
   reason: string | null; // null 显示为“未说明”
   at: string;
+  supersededBy: string | null; // 被哪条新决定替代（证据编号）
 }
 
 export interface PendingItem {

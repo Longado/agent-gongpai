@@ -1,0 +1,4 @@
+{"evidence": [
+ {"reasoning": "用户决定用 SQLite", "task": "none", "kind": "decision_adopt", "cite": ["m1"], "detail": "用 SQLite 存数据", "reason": "简单"},
+ {"reasoning": "用户改用 Postgres，推翻了 SQLite", "task": "none", "kind": "decision_adopt", "cite": ["m3"], "detail": "改用 Postgres", "reason": "要多人同时写", "replaces": ["m1"]}
+]}

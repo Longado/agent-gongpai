@@ -95,8 +95,9 @@ function header(active) {
 }
 
 function banners() {
-  const { view, failed, sessions } = app.data;
+  const { view, failed, sessions, unextracted } = app.data;
   const out = [];
+  if (unextracted > 0) out.push(`<div class="banner" style="border-color:var(--accent);color:var(--accent);background:var(--accent-soft)">有 ${unextracted} 条新消息还没整理。<button class="link" data-act="sync">现在整理</button></div>`);
   if (view.coverageWarning) out.push(`<div class="banner">有来源只读到一部分对话，下面的结论只基于已读到的内容。</div>`);
   if (failed.length) out.push(`<div class="banner err">有 ${failed.length} 批对话整理失败：${esc(failed[0].error)}。<button class="link" data-act="sync">重新整理</button></div>`);
   if (!sessions.length) out.push(`<div class="banner">这个项目还没有读到任何对话。确认绑定的目录里用过 Claude Code 或 Codex，然后点“同步”；网页 AI 的对话可以在<a href="#/settings">接入设置</a>里粘贴导入。</div>`);
@@ -147,7 +148,7 @@ function renderOverview() {
       ${active.map((t) => `<div class="task" data-act="goto" data-href="#/p/${esc(app.pid)}/task/${esc(short(t.id))}">${chip(t.status)}<span class="nm">${esc(t.name)}</span><span class="s src">${esc(sessionLabels(t) || '')}</span><span>${t.status === 'done' || t.status === 'cancelled' ? basis(t.basis) : `<button class="link" data-act="cont" data-task="${esc(t.id)}">继续</button>`}</span></div>`).join('') || '<div class="muted" style="padding-top:8px">还没有任务。同步之后，任务会从对话里整理出来。</div>'}
       ${cancelled.length ? `<div class="sep">已取消</div>${cancelled.map((t) => `<div class="task" data-act="goto" data-href="#/p/${esc(app.pid)}/task/${esc(short(t.id))}">${chip(t.status)}<span class="muted">${esc(t.name)}</span><span class="s src">${esc(t.basisNote)}</span><span></span></div>`).join('')}` : ''}
     </div>
-    ${view.decisions.length ? `<div class="blk"><div class="blk-t">最近决定</div>${view.decisions.slice(-6).reverse().map((d) => `<div class="row" style="padding:3px 0"><span>${fmt(d.at)} ${d.kind === 'adopt' ? '采用' : d.kind === 'reject' ? '否决' : '取消'}：${esc(d.text)}。原因：${esc(d.reason ?? '原文未说明')}</span>${evLink(d.evidenceId)}</div>`).join('')}</div>` : ''}
+    ${view.decisions.length ? `<div class="blk"><div class="blk-t">最近决定</div>${view.decisions.slice(-6).reverse().map((d) => `<div class="row" style="padding:3px 0${d.supersededBy ? ';color:var(--ink-3)' : ''}"><span style="${d.supersededBy ? 'text-decoration:line-through' : ''}">${fmt(d.at)} ${d.kind === 'adopt' ? '采用' : d.kind === 'reject' ? '否决' : '取消'}：${esc(d.text)}。原因：${esc(d.reason ?? '原文未说明')}</span>${d.supersededBy ? `<span class="basis b-ai">已被替代</span>${evLink(d.supersededBy, '新决定')}` : ''}${evLink(d.evidenceId)}</div>`).join('')}</div>` : ''}
   </div>`;
 }
 
@@ -321,6 +322,7 @@ async function renderSettings() {
         <label>来源<select id="im-l"><option>Gemini 网页</option><option>ChatGPT 网页</option><option>Claude 网页</option><option>其他网页 AI</option></select></label>
         <label>标题<input type="text" id="im-t" placeholder="比如：需求讨论"></label>
         <label>这段对话大约发生在（可不填）<input type="date" id="im-d"></label>
+        <label>原页面链接（可不填，原文侧栏可以跳回去）<input type="text" id="im-u" placeholder="https://gemini.google.com/app/..."></label>
         <label class="check"><input type="checkbox" id="im-partial"> 只复制了一部分，前面还有没加载的内容</label>
         <label>对话内容。用“你：”“Gemini：”这样的开头区分发言者<textarea id="im-x"></textarea></label>
         <div><button class="btn pri" data-act="import">导入</button></div></div></div>
@@ -375,6 +377,7 @@ async function openEvidence(evId) {
       <div class="s">${m.ts ? `原始时间 ${fmt(m.ts)}` : `原始时间未知 · 采集于 ${fmt(m.capturedAt)}`}</div>
       <div><b>${who[m.role]}：</b></div><div class="q">${esc(m.text)}</div>
       ${m.session?.coverage === 'partial' ? '<div class="s">覆盖：只读到一部分，前文没加载</div>' : ''}
+      ${m.session?.url && /^https?:\/\//.test(m.session.url) ? `<a class="link" href="${esc(m.session.url)}" target="_blank" rel="noopener noreferrer">打开原页面</a>` : ''}
       ${m.session?.source === 'import' ? `<div class="row"><span class="s">发言者认错了？</span><button class="link" data-act="role" data-msg="${esc(m.id)}" data-role="${m.role === 'user' ? 'assistant' : 'user'}">改成${m.role === 'user' ? 'AI' : '你'}</button></div>` : ''}
     </div>`).join('')}`;
 }
@@ -534,7 +537,7 @@ const on = {
     const text = $('#im-x').value;
     const title = $('#im-t').value.trim();
     if (!text.trim() || !title) return toast('请填写标题和对话内容');
-    const r = await api(`/api/projects/${pid}/import`, { method: 'POST', body: { text, title, label: $('#im-l').value, partial: $('#im-partial').checked, date: $('#im-d').value } });
+    const r = await api(`/api/projects/${pid}/import`, { method: 'POST', body: { text, title, label: $('#im-l').value, partial: $('#im-partial').checked, date: $('#im-d').value, url: $('#im-u').value.trim() } });
     toast(`导入 ${r.newMessages} 条新消息${r.unsure ? '，有一段认不出发言者，请在原文里核对' : ''}。点“同步”整理`);
     $('#im-x').value = '';
     await load();
@@ -556,4 +559,7 @@ document.addEventListener('click', async (e) => {
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#modal').hidden = true; $('#drawer').hidden = true; } });
 window.addEventListener('hashchange', () => load().catch((err) => toast(err.message)));
-load().catch((err) => { $('#main').innerHTML = `<div class="empty">${esc(err.message)}</div>`; });
+// 第一次打开时只读一次新对话（不整理、不调用模型），切换页面时不重复读
+api('/api/read', { method: 'POST' }).catch(() => {}).finally(() => {
+  load().catch((err) => { $('#main').innerHTML = `<div class="empty">${esc(err.message)}</div>`; });
+});

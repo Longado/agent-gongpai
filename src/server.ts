@@ -35,7 +35,7 @@ const CorrectionBody = z.discriminatedUnion('type', [
   z.object({ type: z.literal('new_task'), name: Name, evidenceId: z.string().optional() }),
   z.object({ type: z.literal('split'), name: Name, evidenceIds: z.array(z.string()).min(1).max(50) }),
 ]);
-const ImportBody = z.object({ text: z.string().min(1).max(2_000_000), label: Name, title: Name, partial: z.boolean().default(false), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')) });
+const ImportBody = z.object({ text: z.string().min(1).max(2_000_000), label: Name, title: Name, partial: z.boolean().default(false), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')), url: z.string().max(2000).regex(/^https?:\/\/\S+$/, '只接受 http 或 https 链接').optional().or(z.literal('')) });
 const ProjectBody = z.object({ name: Name, goal: z.string().trim().max(300).optional(), dirs: z.array(z.string().trim().min(1)).max(20).default([]) });
 
 class HttpError extends Error {
@@ -129,6 +129,14 @@ export function serve(db: Db, port: number) {
       });
     }
 
+    if (method === 'POST' && parts[1] === 'read') {
+      // 打开页面时调用：只读新对话，不整理，不调用模型
+      const cc = syncClaudeCode(db);
+      const cx = syncCodex(db);
+      lastSync = { at: new Date().toISOString(), cc, cx };
+      return send(res, 200, { newMessages: cc.newMessages + cx.newMessages });
+    }
+
     if (parts[1] !== 'projects') throw new HttpError(404, '找不到这个地址');
 
     if (method === 'POST' && parts.length === 2) {
@@ -153,7 +161,7 @@ export function serve(db: Db, port: number) {
       db.logUsage(id, 'open_project');
       const textOf = new Map(db.messagesForProject(id).map((m) => [m.id, m.text]));
       const hints = Object.fromEntries(view.tasks.map((t) => [t.id, resultHints(t.evidenceIds.flatMap((e) => evidence[e]?.cite ?? []).map((m) => textOf.get(m) ?? ''))]));
-      return send(res, 200, { project: p, view, evidence, hints, sessions, band: corpusBand(db, id, view), failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
+      return send(res, 200, { project: p, view, evidence, hints, sessions, unextracted: db.unextractedCount(id), band: corpusBand(db, id, view), failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
     }
 
     if (method === 'GET' && parts[3] === 'messages') {
@@ -161,7 +169,7 @@ export function serve(db: Db, port: number) {
       const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50);
       const msgs = db.messagesByIds(ids, id).map((m) => {
         const s = db.getSession(m.sessionId);
-        return { ...m, session: s && { label: s.label, title: s.title, coverage: s.coverage, source: s.source } };
+        return { ...m, session: s && { label: s.label, title: s.title, coverage: s.coverage, source: s.source, url: s.url } };
       });
       return send(res, 200, msgs);
     }
@@ -186,7 +194,7 @@ export function serve(db: Db, port: number) {
 
     if (method === 'POST' && parts[3] === 'import') {
       const b = parse(ImportBody, await readJson(req));
-      const r = importText(db, { projectId: id, text: b.text, label: b.label, title: b.title, coverage: b.partial ? 'partial' : 'full', date: b.date || undefined });
+      const r = importText(db, { projectId: id, text: b.text, label: b.label, title: b.title, coverage: b.partial ? 'partial' : 'full', date: b.date || undefined, url: b.url || undefined });
       return send(res, 200, r);
     }
 

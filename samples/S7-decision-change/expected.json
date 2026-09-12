@@ -1,0 +1,9 @@
+{
+  "decisions": [
+    { "match": ["SQLite"], "superseded": true },
+    { "match": ["Postgres"], "superseded": false }
+  ],
+  "doneEvents": 0,
+  "coverageWarning": false,
+  "note": "两条决定在不同会话里，评估时分两批整理，第二批要用提示词里列出的决定编号指回第一条。"
+}

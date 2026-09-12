@@ -25,17 +25,20 @@ export function openDb(path: string) {
   const scols = (db.prepare('PRAGMA table_info(sessions)').all() as { name: string }[]).map((c) => c.name);
   if (!scols.includes('excluded')) db.exec('ALTER TABLE sessions ADD COLUMN excluded INTEGER NOT NULL DEFAULT 0');
   if (!scols.includes('tool_version')) db.exec('ALTER TABLE sessions ADD COLUMN tool_version TEXT');
+  if (!scols.includes('url')) db.exec('ALTER TABLE sessions ADD COLUMN url TEXT');
+  const ecols = (db.prepare('PRAGMA table_info(evidence)').all() as { name: string }[]).map((c) => c.name);
+  if (!ecols.includes('replaces')) db.exec("ALTER TABLE evidence ADD COLUMN replaces TEXT NOT NULL DEFAULT '[]'");
 
   const all = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).all(...args) as Row[];
   const get = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).get(...args) as Row | undefined;
   const run = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).run(...args);
 
-  const toSession = (r: Row): Session & { file: string | null; cursor: number; extractedUpto: number; excluded: boolean; toolVersion: string | null } => ({
+  const toSession = (r: Row): Session & { file: string | null; cursor: number; extractedUpto: number; excluded: boolean; toolVersion: string | null; url: string | null } => ({
     id: r.id as string, source: r.source as Session['source'], label: r.label as string,
     projectId: (r.project_id as string) ?? null, cwd: (r.cwd as string) ?? null, title: (r.title as string) ?? null,
     coverage: r.coverage as Session['coverage'], file: (r.file as string) ?? null,
     cursor: Number(r.cursor), extractedUpto: Number(r.extracted_upto),
-    excluded: Number(r.excluded) === 1, toolVersion: (r.tool_version as string) ?? null,
+    excluded: Number(r.excluded) === 1, toolVersion: (r.tool_version as string) ?? null, url: (r.url as string) ?? null,
   });
   const toMessage = (r: Row): Message => ({
     id: r.id as string, sessionId: r.session_id as string, seq: Number(r.seq), role: r.role as Role,
@@ -45,7 +48,7 @@ export function openDb(path: string) {
     id: r.id as string, projectId: r.project_id as string, taskId: r.task_id as string,
     kind: r.kind as StoredEvidence['kind'], cite: JSON.parse(r.cite as string), speaker: r.speaker as Role,
     detail: r.detail as string, reason: (r.reason as string) ?? null, at: r.at as string, order: Number(r.ord),
-    downgraded: (r.downgraded as string) ?? null, model: r.model as string, promptVersion: r.prompt_version as string,
+    downgraded: (r.downgraded as string) ?? null, replaces: JSON.parse((r.replaces as string) ?? '[]'), model: r.model as string, promptVersion: r.prompt_version as string,
   });
 
   const tx = <T>(fn: () => T): T => {
@@ -107,14 +110,14 @@ export function openDb(path: string) {
       });
     },
 
-    upsertSession(s: Session & { file?: string | null; toolVersion?: string | null }) {
+    upsertSession(s: Session & { file?: string | null; toolVersion?: string | null; url?: string | null }) {
       run(
-        `INSERT INTO sessions (id, source, label, project_id, cwd, title, coverage, file, tool_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO sessions (id, source, label, project_id, cwd, title, coverage, file, tool_version, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET label = excluded.label, cwd = excluded.cwd,
            title = COALESCE(excluded.title, sessions.title), coverage = excluded.coverage, file = COALESCE(excluded.file, sessions.file),
-           tool_version = COALESCE(excluded.tool_version, sessions.tool_version),
+           tool_version = COALESCE(excluded.tool_version, sessions.tool_version), url = COALESCE(excluded.url, sessions.url),
            project_id = COALESCE(sessions.project_id, excluded.project_id)`,
-        s.id, s.source, s.label, s.projectId, s.cwd, s.title, s.coverage, s.file ?? null, s.toolVersion ?? null,
+        s.id, s.source, s.label, s.projectId, s.cwd, s.title, s.coverage, s.file ?? null, s.toolVersion ?? null, s.url ?? null,
       );
     },
     getSession(id: string) {
@@ -149,6 +152,10 @@ export function openDb(path: string) {
         run('DELETE FROM batches WHERE session_id = ?', sessionId);
         run('UPDATE sessions SET project_id = NULL, excluded = 1 WHERE id = ? AND project_id = ?', sessionId, projectId);
       });
+    },
+    /** 读进来了但还没整理的消息条数。 */
+    unextractedCount(projectId: string): number {
+      return Number(get('SELECT COUNT(*) AS c FROM messages m JOIN sessions s ON s.id = m.session_id WHERE s.project_id = ? AND m.seq > s.extracted_upto', projectId)?.c ?? 0);
     },
     latestToolVersion(source: string): string | null {
       return (get('SELECT tool_version FROM sessions WHERE source = ? AND tool_version IS NOT NULL ORDER BY rowid DESC LIMIT 1', source)?.tool_version as string) ?? null;
@@ -199,12 +206,12 @@ export function openDb(path: string) {
 
     addEvidence(list: StoredEvidence[], batchKey: string | null = null) {
       const stmt = db.prepare(
-        `INSERT INTO evidence (id, project_id, task_id, kind, cite, speaker, detail, reason, at, ord, downgraded, model, prompt_version, batch_key)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO evidence (id, project_id, task_id, kind, cite, speaker, detail, reason, at, ord, downgraded, model, prompt_version, batch_key, replaces)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       tx(() => {
         for (const e of list) {
-          stmt.run(e.id, e.projectId, e.taskId, e.kind, JSON.stringify(e.cite), e.speaker, e.detail, e.reason, e.at, e.order, e.downgraded, e.model, e.promptVersion, batchKey);
+          stmt.run(e.id, e.projectId, e.taskId, e.kind, JSON.stringify(e.cite), e.speaker, e.detail, e.reason, e.at, e.order, e.downgraded, e.model, e.promptVersion, batchKey, JSON.stringify(e.replaces ?? []));
         }
       });
     },

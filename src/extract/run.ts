@@ -38,6 +38,9 @@ export function buildPrompt(db: Db, projectId: string, session: Session, msgs: M
     return `[${ref}] ${who} · ${when(m.ts)}\n${truncate(clip(m), 3_000)}`;
   });
   const renamed = db.correctionsForProject(projectId).map((c) => c.correction).filter((c) => c.type === 'rename' || c.type === 'merge');
+  // 已有的、还有效的决定，编号 D1、D2……让模型在推翻旧决定时指回去
+  const live = view.decisions.filter((d) => (d.kind === 'adopt' || d.kind === 'reject') && !d.supersededBy);
+  const decisionRefs = new Map(live.map((d, i) => [`D${i + 1}`, d.evidenceId]));
   const user = [
     `项目：${project.name}`,
     `项目目标：${project.goal ?? '未填写'}`,
@@ -45,11 +48,12 @@ export function buildPrompt(db: Db, projectId: string, session: Session, msgs: M
     '已有任务（引用时用编号）：',
     ...(view.tasks.length ? view.tasks.map((t) => `- ${shortTask(t.id)} ${t.name}（${STATUS_LABEL[t.status]}）`) : ['- 还没有']),
     ...(renamed.length ? ['用户做过的修正（必须遵守）：', ...renamed.map((c) => `- ${JSON.stringify(c)}`)] : []),
+    ...(live.length ? ['已有决定（被推翻时在 replaces 里用编号）：', ...live.map((d, i) => `- D${i + 1} ${d.kind === 'adopt' ? '采用' : '否决'}：${d.text}`)] : []),
     `来源：${session.label}${session.title ? `「${session.title}」` : ''} · 覆盖：${session.coverage === 'partial' ? '部分，前文没有加载' : '完整'}`,
     '消息：',
     ...lines,
   ].join('\n');
-  return { system: SYSTEM, user, refs };
+  return { system: SYSTEM, user, refs, decisionRefs };
 }
 
 function chunks(msgs: Message[], maxChars: number): Message[][] {
@@ -81,7 +85,7 @@ async function runBatch(db: Db, projectId: string, model: ModelCall, session: Se
   const upto = msgs.at(-1)!.seq;
   if (db.batchDone(key)) { db.setExtractedUpto(session.id, upto); return true; }
 
-  const { system, user, refs } = buildPrompt(db, projectId, db.getSession(session.id)!, msgs);
+  const { system, user, refs, decisionRefs } = buildPrompt(db, projectId, db.getSession(session.id)!, msgs);
   let evidence: unknown[] | null = null;
   let lastError = '';
   let fatal = false;
@@ -117,7 +121,7 @@ async function runBatch(db: Db, projectId: string, model: ModelCall, session: Se
   }
   // 模型用短编号回答已有任务，这里换回完整编号
   const mapped = evidence.map((e: any) => (e?.task?.id && !String(e.task.id).includes('/') ? { ...e, task: { id: `${projectId}/${e.task.id}` } } : e));
-  const r = storeEvidence(db, projectId, mapped, refs, { model: model.name, promptVersion: PROMPT_VERSION, batchKey: key });
+  const r = storeEvidence(db, projectId, mapped, refs, { model: model.name, promptVersion: PROMPT_VERSION, batchKey: key, decisionRefs });
   res.stored += r.stored.length;
   res.dropped.push(...r.dropped.map((d) => ({ why: d.why })));
   db.recordBatch({ key, projectId, sessionId: session.id, uptoSeq: upto, status: 'ok' });

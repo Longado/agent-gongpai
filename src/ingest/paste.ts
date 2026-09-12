@@ -40,6 +40,7 @@ export interface ImportInput {
   title: string;
   coverage?: Coverage;
   date?: string; // 用户标注的大概日期 YYYY-MM-DD
+  url?: string; // 原页面链接，原文侧栏可以跳回去
 }
 
 /** 新旧两个版本逐条对齐（最长公共子序列），返回新版本每一条对应的旧消息编号。 */
@@ -62,7 +63,7 @@ export function importText(db: Db, input: ImportInput): { sessionId: string; new
   const turns = splitSpeakers(input.text).map((t) => ({ ...t, text: redact(t.text) }));
   const sessionId = `im-${hash(`${input.projectId}|${input.label}|${input.title}`)}`;
   const label = input.date ? `${input.label}（日期由你标注）` : input.label;
-  db.upsertSession({ id: sessionId, source: 'import', label, projectId: input.projectId, cwd: null, title: input.title, coverage: input.coverage ?? 'full' });
+  db.upsertSession({ id: sessionId, source: 'import', label, projectId: input.projectId, cwd: null, title: input.title, coverage: input.coverage ?? 'full', url: input.url || null });
   db.raw.prepare('UPDATE sessions SET coverage = ?, label = ? WHERE id = ?').run(input.coverage ?? 'full', label, sessionId);
 
   // 再次导入同一段对话：对上的沿用旧编号，没对上的才是新消息。往前补、往后续都不会重复

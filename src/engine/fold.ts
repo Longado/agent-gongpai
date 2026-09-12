@@ -77,6 +77,7 @@ export function fold(input: FoldInput): FoldOutput {
     return cur;
   };
 
+  const citeOf = new Map(input.evidence.map((e) => [e.id, e.cite]));
   const states = new Map<string, State>();
   for (const rec of input.tasks) {
     if (redirect.has(rec.id)) continue; // 被合并掉的任务不再单独出现
@@ -161,7 +162,14 @@ export function fold(input: FoldInput): FoldOutput {
     const taskId = assigned.get(e.id) ?? (e.taskId === 'none' || e.taskId === 'unknown' ? e.taskId : resolve(e.taskId));
 
     if (kind === 'decision_adopt' || kind === 'decision_reject') {
-      out.decisions.push({ evidenceId: e.id, kind: kind === 'decision_adopt' ? 'adopt' : 'reject', text: e.detail, reason: e.reason, at: e.at });
+      // 这条新决定推翻了哪些旧决定
+      for (const r of e.replaces ?? []) {
+        const old = r.startsWith('e:')
+          ? out.decisions.filter((d) => d.evidenceId === r.slice(2))
+          : out.decisions.filter((d) => citeOf.get(d.evidenceId)?.includes(r.slice(2)));
+        old.forEach((d) => { if (d.evidenceId !== e.id && !d.supersededBy) d.supersededBy = e.id; });
+      }
+      out.decisions.push({ evidenceId: e.id, kind: kind === 'decision_adopt' ? 'adopt' : 'reject', text: e.detail, reason: e.reason, at: e.at, supersededBy: null });
       continue;
     }
     if (kind === 'out_of_scope') { out.ideas.push({ evidenceId: e.id, text: e.detail }); continue; }
@@ -178,7 +186,7 @@ export function fold(input: FoldInput): FoldOutput {
     // 取消一个从没进入范围的事项：不建任务，记成否决
     if (kind === 'plan_cancel' && !s.active) {
       suggestions.delete(s.rec.id);
-      out.decisions.push({ evidenceId: e.id, kind: 'reject', text: `不做「${s.name}」`, reason: e.reason, at: e.at });
+      out.decisions.push({ evidenceId: e.id, kind: 'reject', text: `不做「${s.name}」`, reason: e.reason, at: e.at, supersededBy: null });
       continue;
     }
 
@@ -208,7 +216,7 @@ export function fold(input: FoldInput): FoldOutput {
         break;
       case 'plan_cancel':
         if (s.inPlan) { sealed = true; planChange(s, 'cancelled', e.at, e.id, e.cite); }
-        out.decisions.push({ evidenceId: e.id, kind: 'cancel', text: `取消「${s.name}」`, reason: e.reason, at: e.at });
+        out.decisions.push({ evidenceId: e.id, kind: 'cancel', text: `取消「${s.name}」`, reason: e.reason, at: e.at, supersededBy: null });
         target = { to: 'cancelled', basis: 'user', note: `${day(e.at)} 你决定不做${e.reason ? `：${e.reason}` : ''}` };
         break;
       case 'started':

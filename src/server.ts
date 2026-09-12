@@ -15,8 +15,8 @@ import { extractProject } from './extract/run.ts';
 import { deepseek } from './extract/model.ts';
 
 const WEB = new URL('../web/', import.meta.url);
-const STATIC: Record<string, string> = { '/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css' };
-const TYPES: Record<string, string> = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8' };
+const STATIC: Record<string, string> = { '/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/logo.svg': 'logo.svg' };
+const TYPES: Record<string, string> = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', svg: 'image/svg+xml' };
 
 const Status = z.enum(['pending_confirm', 'todo', 'doing', 'to_verify', 'done', 'blocked', 'cancelled']);
 const Name = z.string().trim().min(1).max(60);

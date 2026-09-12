@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.png">
+    <img alt="Working Corpus" src="docs/logo-light.png" width="520">
+  </picture>
+</p>
+
 # Working Corpus
 
 **你在 Claude Code、Codex 和网页 AI 之间来回切。Working Corpus 把这些对话整理成一页项目现场，每条结论都能点回原话。**

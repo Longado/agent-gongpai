@@ -68,7 +68,7 @@ async function load() {
 function renderNav(r) {
   const pending = app.data?.view.pending.length ?? 0;
   $('#nav').innerHTML = `
-    <div class="brand">Working Corpus <small>项目记忆</small></div>
+    <div class="brand"><img src="/logo.svg" alt="" width="22" height="22" style="image-rendering:pixelated">Working Corpus</div>
     <div class="grp">项目</div>
     ${app.projects.map((p) => `<a href="#/p/${esc(p.id)}" class="${p.id === app.pid && r.page !== 'settings' ? 'on' : ''}">${esc(p.name)}${p.pending ? `<span class="cnt">${p.pending}</span>` : ''}</a>`).join('')}
     <div class="grp">需要处理</div>
@@ -269,7 +269,7 @@ function usageLine(u) {
 
 function renderWelcome() {
   return `<div class="stack" style="max-width:560px">
-    <h1 style="margin:0">Working Corpus</h1>
+    <div class="row"><img src="/logo.svg" alt="" width="40" height="40" style="image-rendering:pixelated"><h1 style="margin:0">Working Corpus</h1></div>
     <p>你继续在 Claude Code、Codex、网页 AI 里干活。回来时，这里有一页有证据的项目现场：做到哪、卡在哪、下一步做什么。</p>
     <div class="blk"><div class="blk-t">先建一个项目</div><div class="stack">
       <label>名称<input type="text" id="np-n"></label><label>一句话目标<input type="text" id="np-g"></label>

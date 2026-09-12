@@ -63,6 +63,7 @@ async function load() {
   else if (r.page === 'plan') main.innerHTML = renderPlan();
   else if (r.page === 'inbox') main.innerHTML = renderInbox();
   else main.innerHTML = renderOverview();
+  drawBand();
 }
 
 function renderNav(r) {
@@ -120,7 +121,7 @@ function renderOverview() {
   const today = new Date().toDateString();
   const doneToday = view.doneEvents.filter((d) => new Date(d.at).toDateString() === today).length;
 
-  return `${header('overview')}<div class="stack">${banners()}
+  return `${header('overview')}${bandHtml()}<div class="stack">${banners()}
     <div class="grid2">
       <div class="blk"><div class="blk-t">当前目标</div>
         <div class="big">${esc(project.goal || '还没填写项目目标')}</div>
@@ -140,7 +141,7 @@ function renderOverview() {
       ${view.ideas.length ? `<div class="s" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule)">范围外想法 ${view.ideas.length} 条，不会自动变成待办：${view.ideas.slice(-3).map((x) => esc(x.text)).join('；')}</div>` : ''}
     </div>
     <div class="blk"><div class="blk-t">任务 · 当前 ${active.length} 项 <span class="r s">今日完成 ${doneToday} · 已取消 ${cancelled.length} 项单列</span></div>
-      <div class="bar" aria-hidden="true">${['done', 'doing', 'to_verify', 'todo', 'blocked'].map((s) => `<i style="width:${(byStatus(s).length / total) * 100}%;background:${COLOR[s]}"></i>`).join('')}</div>
+      <div class="bar" aria-hidden="true">${['done', 'doing', 'to_verify', 'todo', 'blocked'].filter((s) => byStatus(s).length).map((s) => `<i style="flex:${byStatus(s).length};background:${COLOR[s]}"></i>`).join('')}</div>
       <div class="s">${['done', 'doing', 'to_verify', 'todo', 'blocked'].map((s) => `${STATUS[s]} ${byStatus(s).length}`).join(' · ')}。不显示项目百分比。</div>
       ${active.map((t) => `<div class="task" data-act="goto" data-href="#/p/${esc(app.pid)}/task/${esc(short(t.id))}">${chip(t.status)}<span class="nm">${esc(t.name)}</span><span class="s src">${esc(sessionLabels(t) || '')}</span><span>${t.status === 'done' || t.status === 'cancelled' ? basis(t.basis) : `<button class="link" data-act="cont" data-task="${esc(t.id)}">继续</button>`}</span></div>`).join('') || '<div class="muted" style="padding-top:8px">还没有任务。同步之后，任务会从对话里整理出来。</div>'}
       ${cancelled.length ? `<div class="sep">已取消</div>${cancelled.map((t) => `<div class="task" data-act="goto" data-href="#/p/${esc(app.pid)}/task/${esc(short(t.id))}">${chip(t.status)}<span class="muted">${esc(t.name)}</span><span class="s src">${esc(t.basisNote)}</span><span></span></div>`).join('')}` : ''}
@@ -148,6 +149,67 @@ function renderOverview() {
     ${view.decisions.length ? `<div class="blk"><div class="blk-t">最近决定</div>${view.decisions.slice(-6).reverse().map((d) => `<div class="row" style="padding:3px 0"><span>${fmt(d.at)} ${d.kind === 'adopt' ? '采用' : d.kind === 'reject' ? '否决' : '取消'}：${esc(d.text)}。原因：${esc(d.reason ?? '原文未说明')}</span>${evLink(d.evidenceId)}</div>`).join('')}</div>` : ''}
   </div>`;
 }
+
+// ---------- 语料带 ----------
+const BAND_STATUS = ['done', 'to_verify', 'doing', 'todo', 'blocked', 'cancelled'];
+function bandHtml() {
+  const band = app.data.band ?? [];
+  if (!band.length) return '';
+  const linked = band.filter((b) => b.status).length;
+  return `<div class="band"><div class="blk-t">语料带 · ${band.length} 条消息，${linked} 条已经变成任务证据<span class="r s">每个方块是一条消息，颜色是它支撑的任务的状态</span></div>
+    <canvas id="band" aria-label="语料带：${band.length} 条消息，其中 ${linked} 条是任务证据"></canvas>
+    <div class="band-legend">${BAND_STATUS.map((st) => `<span><i style="background:var(--${st === 'to_verify' ? 'verify' : st === 'blocked' ? 'block' : st === 'cancelled' ? 'cancel' : st})"></i>${STATUS[st]}</span>`).join('')}<span><i style="background:var(--rule-2)"></i>没有归入任务</span></div></div>`;
+}
+
+let bandFrame = 0;
+function drawBand() {
+  cancelAnimationFrame(bandFrame);
+  const canvas = document.getElementById('band');
+  const band = app.data?.band ?? [];
+  if (!canvas || !band.length) return;
+  const css = getComputedStyle(document.documentElement);
+  const color = (st) => css.getPropertyValue(`--${{ to_verify: 'verify', blocked: 'block', cancelled: 'cancel' }[st] ?? st ?? 'idle'}`).trim();
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // 一整片像素格铺满宽度：消息从左往右按列填，没填到的格子是很淡的底色；放不下时缩小格子
+  const GAP = 2;
+  let size = 8, rows = 0, cols = 0;
+  for (; size >= 3; size--) {
+    rows = Math.max(1, Math.floor((h + GAP) / (size + GAP)));
+    cols = Math.max(1, Math.floor((w + GAP) / (size + GAP)));
+    if (rows * cols >= band.length) break;
+  }
+  const total = rows * cols;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const idle = color(null);
+  const paint = (t) => {
+    ctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < total; i++) {
+      const col = Math.floor(i / rows), row = i % rows;
+      const b = band[i];
+      if (!b) { ctx.globalAlpha = 0.45; ctx.fillStyle = idle; }
+      else {
+        const wave = still || !b.status ? 1 : 0.72 + 0.28 * Math.sin(t / 900 - col * 0.18);
+        ctx.globalAlpha = b.status ? wave : b.role === 'user' ? 1 : 0.8;
+        ctx.fillStyle = b.status ? color(b.status) : css.getPropertyValue('--rule-2').trim();
+      }
+      ctx.fillRect(col * (size + GAP), row * (size + GAP), size, size);
+    }
+    ctx.globalAlpha = 1;
+    if (!still) bandFrame = requestAnimationFrame(paint);
+  };
+  paint(0);
+  canvas.onmousemove = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const col = Math.floor((e.clientX - r.left) / (size + GAP)), row = Math.floor((e.clientY - r.top) / (size + GAP));
+    const b = row < rows ? band[col * rows + row] : undefined;
+    canvas.title = b ? `${fmt(b.at)} · ${b.role === 'user' ? '你' : b.role === 'assistant' ? 'AI' : '工具报错'}${b.task ? ` · ${b.task} · ${STATUS[b.status]}` : ' · 没有归入任务'}` : '';
+  };
+}
+window.addEventListener('resize', () => drawBand());
 
 // ---------- 任务详情 ----------
 function renderTask(shortId) {

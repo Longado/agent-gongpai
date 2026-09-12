@@ -8,6 +8,7 @@ import type { Db } from './db.ts';
 import type { StoredEvidence } from './contracts.ts';
 import { buildProjectView } from './engine/view.ts';
 import { buildContext } from './engine/context.ts';
+import { corpusBand } from './engine/band.ts';
 import { syncClaudeCode, type SyncResult } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
 import { importText } from './ingest/paste.ts';
@@ -148,7 +149,7 @@ export function serve(db: Db, port: number) {
       for (const e of db.evidenceForProject(id)) evidence[e.id] = { cite: e.cite, kind: e.kind, detail: e.detail, speaker: e.speaker, reason: e.reason, at: e.at };
       const sessions = db.sessionsForProject(id).map((s) => ({ id: s.id, label: s.label, title: s.title, coverage: s.coverage, source: s.source, messages: db.messagesForSession(s.id).length }));
       db.logUsage(id, 'open_project');
-      return send(res, 200, { project: p, view, evidence, sessions, failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
+      return send(res, 200, { project: p, view, evidence, sessions, band: corpusBand(db, id, view), failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
     }
 
     if (method === 'GET' && parts[3] === 'messages') {

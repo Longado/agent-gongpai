@@ -22,7 +22,7 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({ error: '返回内容无法解析' }));
-  if (!res.ok) throw new Error(data.error || `请求失败（${res.status}）`);
+  if (!res.ok) throw Object.assign(new Error(data.error || `请求失败（${res.status}）`), { status: res.status });
   return data;
 }
 
@@ -252,10 +252,19 @@ async function renderSettings() {
           <label>代码目录（绝对路径）<input type="text" id="np-d" placeholder="/Users/你/code/项目"></label>
           <div><button class="btn pri" data-act="create">建项目</button></div></div></div>
         <div class="blk"><div class="blk-t">整理方式</div><div>整理使用远程模型 ${esc(s.model)}，只发送已绑定项目的对话正文。读取时已把像密钥、令牌的内容换成“[已隐藏的凭证]”。</div></div>
-        ${app.pid ? `<div class="blk"><div class="blk-t">数据控制</div><div class="s">删除项目会同时删除它的对话、任务、证据和修正记录，不能恢复。本机的 Claude Code 和 Codex 原始记录不受影响。</div><div style="margin-top:8px"><button class="btn dg" data-act="delete">删除项目「${esc(app.data?.project.name ?? '')}」</button></div></div>` : ''}
+        ${app.pid && app.data ? `<div class="blk"><div class="blk-t">数据控制 · ${esc(app.data.project.name)}</div>
+          <div class="s">暂停采集：不再读取新对话，已有数据保留。删除项目：同时删除它的对话、任务、证据和修正记录，不能恢复；本机的 Claude Code 和 Codex 原始记录不受影响。</div>
+          <div class="row" style="margin-top:8px"><button class="btn" data-act="pause" data-paused="${app.data.project.paused ? '1' : '0'}">${app.data.project.paused ? '恢复采集' : '暂停采集'}</button><button class="btn dg" data-act="delete">删除项目</button></div></div>
+        <div class="blk"><div class="blk-t">使用记录 · ${esc(app.data.project.name)}</div><div>${usageLine(await api(`/api/projects/${app.pid}/usage`))}</div><div class="s">只记次数，不记内容，用来判断这个工具是否真的在帮忙。</div></div>` : ''}
       </div>
     </div>
   </div>`;
+}
+
+function usageLine(u) {
+  const n = (k) => u[k] ?? 0;
+  const corrections = Object.entries(u).filter(([k]) => k.startsWith('correction_')).reduce((a, [, v]) => a + v, 0);
+  return `打开 ${n('open_project')} 次 · 同步 ${n('sync')} 次 · 查看续接上下文 ${n('context_view')} 次 · 复制 ${n('context_copy')} 次 · 采纳下一步 ${n('next_accept')} 次 · 人工修正 ${corrections} 次`;
 }
 
 function renderWelcome() {
@@ -321,9 +330,31 @@ const on = {
     try {
       const r = await api(`/api/projects/${pid}/sync`, { method: 'POST' });
       toast(`读到新消息 ${r.newMessages} 条，新证据 ${r.stored} 条${r.failed ? `，${r.failed} 批整理失败` : ''}`);
+    } catch (err) {
+      if (err.status !== 428) throw err;
+      // 第一次整理：先说明会发送什么，同意后再发
+      const modal = $('#modal');
+      modal.hidden = false;
+      modal.innerHTML = `<div class="card" role="dialog" aria-label="发送说明"><b>整理前请确认</b>
+        <div>${esc(err.message)}</div>
+        <div class="s">只发送这个项目已读到的对话正文。读取时已把像密钥、令牌的内容换成“[已隐藏的凭证]”。不同意也可以继续使用：看原文、手动建任务、手动改状态。</div>
+        <div class="row"><button class="btn pri" data-act="consent" data-pid="${esc(pid)}">同意并整理</button><button class="btn" data-act="close-modal">先不整理</button></div></div>`;
     } finally {
-      await load();
+      await load().catch(() => {});
     }
+  },
+  async consent(el) {
+    await api(`/api/projects/${el.dataset.pid}/consent`, { method: 'POST' });
+    $('#modal').hidden = true;
+    toast('已同意，开始整理');
+    const btn = document.querySelector('[data-act="sync"]');
+    if (btn) await on.sync(btn);
+  },
+  async pause(el) {
+    const paused = el.dataset.paused !== '1';
+    await api(`/api/projects/${app.pid}/pause`, { method: 'POST', body: { paused } });
+    toast(paused ? '已暂停采集，已有数据保留' : '已恢复采集');
+    await load();
   },
   'confirm-done'(el) { return correct({ type: 'set_status', taskId: el.dataset.task, status: 'done', note: '你在页面上确认完成' }, '已确认完成'); },
   unblock(el) { return correct({ type: 'set_status', taskId: el.dataset.task, status: 'doing', note: '你标记阻塞已解决' }, '已标记为进行中'); },

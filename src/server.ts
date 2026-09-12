@@ -180,7 +180,24 @@ export function serve(db: Db, port: number) {
       return send(res, 200, r);
     }
 
+    if (method === 'POST' && parts[3] === 'consent') {
+      db.setRemoteOk(id, true);
+      return send(res, 200, { ok: true });
+    }
+
+    if (method === 'POST' && parts[3] === 'pause') {
+      const b = parse(z.object({ paused: z.boolean() }), await readJson(req));
+      db.setPaused(id, b.paused);
+      return send(res, 200, { ok: true });
+    }
+
+    if (method === 'GET' && parts[3] === 'usage') {
+      return send(res, 200, db.usageSummary(id));
+    }
+
     if (method === 'POST' && parts[3] === 'sync') {
+      // 需求：启用远程整理前说明会发送什么，得到同意再发
+      if (!p.remoteOk) throw new HttpError(428, `整理会把这个项目的对话正文发送到远程模型 ${model.name}。请先确认。`);
       if (syncing) throw new HttpError(409, '正在同步，请稍等');
       syncing = true;
       try {

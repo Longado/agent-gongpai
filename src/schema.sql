@@ -4,7 +4,9 @@ CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   goal TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  paused INTEGER NOT NULL DEFAULT 0,     -- 暂停采集：不再读新对话，已有数据保留
+  remote_ok INTEGER NOT NULL DEFAULT 0   -- 已同意把对话正文发给远程模型整理
 );
 
 CREATE TABLE IF NOT EXISTS project_dirs (

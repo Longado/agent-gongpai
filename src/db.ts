@@ -18,6 +18,10 @@ export function openDb(path: string) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(SCHEMA);
+  // 老数据库补字段
+  const cols = (db.prepare('PRAGMA table_info(projects)').all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes('paused')) db.exec('ALTER TABLE projects ADD COLUMN paused INTEGER NOT NULL DEFAULT 0');
+  if (!cols.includes('remote_ok')) db.exec('ALTER TABLE projects ADD COLUMN remote_ok INTEGER NOT NULL DEFAULT 0');
 
   const all = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).all(...args) as Row[];
   const get = (sql: string, ...args: (string | number | null)[]) => db.prepare(sql).get(...args) as Row | undefined;
@@ -61,8 +65,9 @@ export function openDb(path: string) {
       run('INSERT OR IGNORE INTO project_dirs (project_id, dir) VALUES (?, ?)', projectId, dir);
     },
     listProjects() {
-      return all('SELECT id, name, goal, created_at FROM projects ORDER BY created_at').map((r) => ({
+      return all('SELECT id, name, goal, created_at, paused, remote_ok FROM projects ORDER BY created_at').map((r) => ({
         id: r.id as string, name: r.name as string, goal: (r.goal as string) ?? null,
+        paused: Number(r.paused) === 1, remoteOk: Number(r.remote_ok) === 1,
         dirs: all('SELECT dir FROM project_dirs WHERE project_id = ?', r.id as string).map((d) => d.dir as string),
       }));
     },
@@ -76,6 +81,20 @@ export function openDb(path: string) {
         .filter((r) => dir === r.dir || dir.startsWith((r.dir as string).replace(/\/$/, '') + sep))
         .sort((a, b) => (b.dir as string).length - (a.dir as string).length)[0];
       return hit ? (hit.project_id as string) : null;
+    },
+    setPaused(id: string, paused: boolean) {
+      run('UPDATE projects SET paused = ? WHERE id = ?', paused ? 1 : 0, id);
+    },
+    setRemoteOk(id: string, ok: boolean) {
+      run('UPDATE projects SET remote_ok = ? WHERE id = ?', ok ? 1 : 0, id);
+    },
+    isPaused(id: string): boolean {
+      return Number(get('SELECT paused FROM projects WHERE id = ?', id)?.paused ?? 0) === 1;
+    },
+    usageSummary(projectId: string): Record<string, number> {
+      const out: Record<string, number> = {};
+      for (const r of all('SELECT kind, COUNT(*) AS c FROM usage_events WHERE project_id = ? GROUP BY kind', projectId)) out[r.kind as string] = Number(r.c);
+      return out;
     },
     deleteProject(id: string) {
       tx(() => {

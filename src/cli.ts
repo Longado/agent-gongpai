@@ -17,6 +17,7 @@ const HELP = `用法：npm run gongpai -- <命令>
 
   project add <名称> --dir <目录> [--goal <目标>]   建项目并绑定目录（可多次 --dir）
   project list                                     列出项目
+  project pause|resume --project <编号>              暂停或恢复采集（已有数据保留）
   sync [--no-extract]                              读取 Claude Code 和 Codex 的新对话，并整理
   import <文件> --project <编号> --label <来源> --title <标题> [--partial] [--date YYYY-MM-DD]
   extract [--project <编号>]                        只整理，不读取
@@ -44,6 +45,8 @@ const need = (v: string | undefined, name: string): string => {
 async function extractAll(d: ReturnType<typeof db>, projectIds: string[]) {
   const model = deepseek();
   for (const id of projectIds) {
+    if (d.isPaused(id)) continue;
+    console.log(`整理「${d.getProject(id)?.name}」：对话正文会发送到远程模型 ${model.name}，读取时已隐藏凭证`);
     const r = await extractProject(d, id, model, { onBatch: (i, n) => process.stdout.write(`\r整理 ${d.getProject(id)?.name}：第 ${i}/${n} 批`) });
     if (r.batches) process.stdout.write('\n');
     console.log(`整理完成：新证据 ${r.stored} 条，丢弃 ${r.dropped.length} 条${r.failed ? `，失败 ${r.failed} 批：${r.errors.join('；')}` : ''}`);
@@ -56,6 +59,9 @@ async function main() {
     const d = db();
     const id = d.createProject({ name: need(arg, '名称'), goal: values.goal ?? null, dirs: (values.dir ?? []).map((x) => resolve(x)) });
     console.log(`已建项目 ${id}`);
+  } else if (cmd === 'project' && (sub === 'pause' || sub === 'resume')) {
+    db().setPaused(need(values.project, 'project'), sub === 'pause');
+    console.log(sub === 'pause' ? '已暂停采集，已有数据保留' : '已恢复采集');
   } else if (cmd === 'project' && sub === 'list') {
     for (const p of db().listProjects()) console.log(`${p.id}  ${p.name}  ${p.dirs.join('，')}`);
   } else if (cmd === 'sync') {

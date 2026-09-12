@@ -109,6 +109,7 @@ export function syncCodex(db: Db, opts: { root?: string; resolveRoot?: (dir: str
     if (!head.sessionId || !head.cwd) continue;
     const known = db.getSession(head.sessionId);
     const projectId = known?.projectId ?? db.projectForDir(resolve(head.cwd)) ?? db.projectForDir(head.cwd);
+    if (projectId && db.isPaused(projectId)) continue; // 暂停采集的项目不读新内容
     if (!projectId) {
       res.skippedSessions++;
       const key = resolve(head.cwd);

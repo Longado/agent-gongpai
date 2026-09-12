@@ -9,6 +9,7 @@ import type { StoredEvidence } from './contracts.ts';
 import { buildProjectView } from './engine/view.ts';
 import { buildContext } from './engine/context.ts';
 import { corpusBand } from './engine/band.ts';
+import { resultHints } from './engine/hints.ts';
 import { syncClaudeCode, type SyncResult } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
 import { importText } from './ingest/paste.ts';
@@ -32,6 +33,7 @@ const CorrectionBody = z.discriminatedUnion('type', [
   z.object({ type: z.literal('set_role'), messageId: z.string(), role: z.enum(['user', 'assistant']) }),
   z.object({ type: z.literal('backfill_plan'), taskIds: z.array(z.string()).default([]), names: z.array(Name).max(30).default([]) }),
   z.object({ type: z.literal('new_task'), name: Name, evidenceId: z.string().optional() }),
+  z.object({ type: z.literal('split'), name: Name, evidenceIds: z.array(z.string()).min(1).max(50) }),
 ]);
 const ImportBody = z.object({ text: z.string().min(1).max(2_000_000), label: Name, title: Name, partial: z.boolean().default(false), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')) });
 const ProjectBody = z.object({ name: Name, goal: z.string().trim().max(300).optional(), dirs: z.array(z.string().trim().min(1)).max(20).default([]) });
@@ -149,7 +151,9 @@ export function serve(db: Db, port: number) {
       for (const e of db.evidenceForProject(id)) evidence[e.id] = { cite: e.cite, kind: e.kind, detail: e.detail, speaker: e.speaker, reason: e.reason, at: e.at };
       const sessions = db.sessionsForProject(id).map((s) => ({ id: s.id, label: s.label, title: s.title, coverage: s.coverage, source: s.source, messages: db.messagesForSession(s.id).length }));
       db.logUsage(id, 'open_project');
-      return send(res, 200, { project: p, view, evidence, sessions, band: corpusBand(db, id, view), failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
+      const textOf = new Map(db.messagesForProject(id).map((m) => [m.id, m.text]));
+      const hints = Object.fromEntries(view.tasks.map((t) => [t.id, resultHints(t.evidenceIds.flatMap((e) => evidence[e]?.cite ?? []).map((m) => textOf.get(m) ?? ''))]));
+      return send(res, 200, { project: p, view, evidence, hints, sessions, band: corpusBand(db, id, view), failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
     }
 
     if (method === 'GET' && parts[3] === 'messages') {
@@ -250,6 +254,13 @@ export function serve(db: Db, port: number) {
           const taskId = db.addTask({ projectId: id, name: c.name, goal: null, createdAt: new Date().toISOString() });
           if (c.evidenceId) db.addCorrection(id, { type: 'assign', evidenceId: c.evidenceId, taskId });
           db.addCorrection(id, { type: 'set_status', taskId, status: 'todo', note: '你手动建的任务' });
+          return send(res, 200, { taskId });
+        }
+        case 'split': {
+          // 把选中的证据拆成一个新任务；新任务的状态由这些证据自己算出来
+          c.evidenceIds.forEach((e) => ownEvidence(id, e));
+          const taskId = db.addTask({ projectId: id, name: c.name, goal: null, createdAt: new Date().toISOString() });
+          c.evidenceIds.forEach((e) => db.addCorrection(id, { type: 'assign', evidenceId: e, taskId }));
           return send(res, 200, { taskId });
         }
         case 'set_role': {

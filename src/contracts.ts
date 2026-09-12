@@ -162,6 +162,7 @@ export interface TaskView {
   sessions: string[];
   history: StatusChange[];
   lastAt: string;
+  evidenceIds: string[]; // 实际折叠进这个任务的证据（合并、改派之后）
 }
 
 export interface PlanItem {

@@ -5,6 +5,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const STATUS = { pending_confirm: '待确认', todo: '待开始', doing: '进行中', to_verify: '待验证', done: '已完成', blocked: '受阻', cancelled: '已取消' };
 const ORDER = ['to_verify', 'blocked', 'doing', 'todo', 'pending_confirm', 'done'];
 const BASIS = { user: '用户确认', text: '原文明确', ai: 'AI 自述', manual: '你改的' };
+const KIND = { plan_item: '规划', plan_add: '规划新增', plan_cancel: '取消', started: '开始执行', ai_claims_done: 'AI 称完成', user_confirms_done: '你确认完成', failure: '失败', blocked: '受阻', unblocked: '解除阻塞', decision_adopt: '采用', decision_reject: '否决', out_of_scope: '范围外' };
 const COLOR = { done: 'var(--done)', doing: 'var(--doing)', to_verify: 'var(--verify)', todo: 'var(--todo)', blocked: 'var(--block)' };
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '时间未知');
 const short = (id) => String(id).split('/').pop();
@@ -227,6 +228,10 @@ function renderTask(shortId) {
           <div style="margin-top:6px">完成条件：${t.doneCondition ? `${esc(t.doneCondition)} ${t.doneConditionConfirmed ? basis('user') : ''}` : '<span class="muted">还没确认</span>'}</div>
           <div class="row" style="margin-top:8px"><input type="text" id="cond" placeholder="比如：文件能打开，金额和统计页一致" value="${esc(t.doneCondition ?? '')}" style="flex:1;min-width:200px"><button class="btn" data-act="condition" data-task="${esc(t.id)}">确认为完成条件</button></div>
         </div>
+        <div class="blk"><div class="blk-t">证据 · ${t.evidenceIds.length} 条<span class="r s">勾选后可以拆成新任务</span></div>
+          ${t.evidenceIds.map((id) => { const e = app.data.evidence[id]; return e ? `<label class="check" style="padding:5px 0;border-top:1px solid var(--rule)"><input type="checkbox" class="sp" value="${esc(id)}"><span class="s" style="min-width:74px">${esc(KIND[e.kind] ?? e.kind)}</span><span>${esc(e.detail)}</span>${evLink(id)}</label>` : ''; }).join('')}
+          <div class="row" style="margin-top:10px"><input type="text" id="sp-name" placeholder="新任务名称"><button class="btn" data-act="split" data-task="${esc(t.id)}">拆成新任务</button></div>
+        </div>
         <div class="blk"><div class="blk-t">状态变化</div>
           ${t.history.map((h) => `<div class="hist"><span class="s">${fmt(h.at)}</span><span class="row">${h.from ? chip(h.from) : ''}${chip(h.to)}</span><span>${esc(h.note)} ${basis(h.basis)} ${evLink(h.evidenceId)}</span></div>`).join('')}
           <div class="s" style="margin-top:8px">完成事件 ${view.doneEvents.filter((d) => d.taskId === t.id).length} 次。AI 自述不计为完成，重开不新增任务。</div>
@@ -235,6 +240,7 @@ function renderTask(shortId) {
       <div class="stack" style="align-content:start">
         <div class="blk"><div class="blk-t">现在的依据</div><div>${esc(t.basisNote)} ${basis(t.basis)} ${evLink(t.basisEvidenceId)}</div>${t.blocker ? `<div style="margin-top:6px">阻塞：${esc(t.blocker)}</div>` : ''}</div>
         <div class="blk"><div class="blk-t">跨会话进展</div>${t.sessions.map((sid) => { const s = sessions.find((x) => x.id === sid); return s ? `<div><span class="s">${esc(s.label)}</span> ${esc(s.title ?? '')}</div>` : ''; }).join('') || '<span class="muted">无</span>'}</div>
+        ${hintsHtml(app.data.hints?.[t.id])}
         <div class="blk"><div class="blk-t">修改</div>
           <div class="row"><select id="st">${Object.keys(STATUS).filter((s) => s !== 'pending_confirm').map((s) => `<option value="${s}" ${s === t.status ? 'selected' : ''}>${STATUS[s]}</option>`).join('')}</select><button class="btn" data-act="status" data-task="${esc(t.id)}">改状态</button></div>
           <div class="row" style="margin-top:8px"><input type="text" id="nm" value="${esc(t.name)}"><button class="btn" data-act="rename" data-task="${esc(t.id)}">改名</button></div>
@@ -243,6 +249,16 @@ function renderTask(shortId) {
         </div>
       </div>
     </div></div>`;
+}
+
+function hintsHtml(h) {
+  if (!h || !(h.files.length + h.commits.length + h.links.length)) return '<div class="blk"><div class="blk-t">结果线索</div><span class="muted">引用的消息里没有提到文件、提交或链接</span></div>';
+  const safe = (u) => (/^https?:\/\//.test(u) ? u : '#'); // 只放 http 和 https，挡住 javascript: 这类链接
+  const group = (label, items, fmtItem) => (items.length ? `<div style="margin-top:6px"><span class="s">${label}</span><div class="stack" style="gap:2px;margin-top:2px">${items.slice(0, 12).map(fmtItem).join('')}${items.length > 12 ? `<span class="s">等 ${items.length} 个</span>` : ''}</div></div>` : '');
+  return `<div class="blk"><div class="blk-t">结果线索 · 从引用的消息里提取，不代表已经验证</div>
+    ${group('文件', h.files, (f) => `<span class="mono">${esc(f)}</span>`)}
+    ${group('提交', h.commits, (c) => `<span class="mono">${esc(c)}</span>`)}
+    ${group('链接', h.links, (l) => `<a class="mono" href="${esc(safe(l))}" target="_blank" rel="noopener noreferrer">${esc(l)}</a>`)}</div>`;
 }
 
 // ---------- 规划 ----------
@@ -372,7 +388,7 @@ async function openContext(taskId) {
     <div class="row" style="justify-content:space-between"><b>继续任务</b><button class="link" data-act="close-modal">关闭</button></div>
     <div class="s">可以删改后再复制。复制之后记为“已复制”，粘贴到目标工具并发送，才算真正开始。</div>
     <textarea id="ctx">${esc(text)}</textarea>
-    <div class="row"><button class="btn pri" data-act="copy">复制</button><span class="s" id="ctx-state">已生成</span></div></div>`;
+    <div class="row"><button class="btn pri" data-act="copy">复制</button><button class="btn" data-act="export-md" data-name="${esc(text.split('\n')[0].replace(/^# 继续：/, ''))}">导出 Markdown</button><span class="s" id="ctx-state">已生成</span></div></div>`;
 }
 
 // ---------- 事件 ----------
@@ -387,6 +403,22 @@ const on = {
     $('#ctx-state').textContent = '已复制';
     await api(`/api/projects/${app.pid}/usage`, { method: 'POST', body: { kind: 'context_copy' } });
     toast('已复制到剪贴板');
+  },
+  'export-md'(el) {
+    const blob = new Blob([$('#ctx').value], { type: 'text/markdown;charset=utf-8' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `继续-${el.dataset.name || '任务'}.md` });
+    a.click();
+    URL.revokeObjectURL(a.href);
+    $('#ctx-state').textContent = '已导出';
+  },
+  async split(el) {
+    const evidenceIds = [...document.querySelectorAll('.sp:checked')].map((x) => x.value);
+    const name = $('#sp-name').value.trim();
+    if (!evidenceIds.length) return toast('先勾选要拆出去的证据');
+    if (!name) return toast('给新任务起个名字');
+    const { taskId } = await api(`/api/projects/${app.pid}/corrections`, { method: 'POST', body: { type: 'split', name, evidenceIds } });
+    toast('已拆出新任务，两边的状态都按证据重算了');
+    location.hash = `#/p/${app.pid}/task/${short(taskId)}`;
   },
   async sync(el) {
     const pid = app.pid ?? app.projects[0]?.id;

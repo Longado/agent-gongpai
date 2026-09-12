@@ -52,6 +52,7 @@ interface State {
   sessions: Set<string>;
   lastAt: string;
   manualAt: number | null;
+  evidence: string[];
   doneCondition: string | null;
   conditionConfirmed: boolean;
 }
@@ -81,7 +82,7 @@ export function fold(input: FoldInput): FoldOutput {
     if (redirect.has(rec.id)) continue; // 被合并掉的任务不再单独出现
     states.set(rec.id, {
       rec, name: rec.name, active: false, status: null, basis: 'text', basisNote: '', basisEvidenceId: null, history: [],
-      inPlan: false, blocker: null, sessions: new Set(), lastAt: rec.createdAt, manualAt: null, doneCondition: null, conditionConfirmed: false,
+      inPlan: false, blocker: null, sessions: new Set(), lastAt: rec.createdAt, manualAt: null, evidence: [], doneCondition: null, conditionConfirmed: false,
     });
   }
 
@@ -182,6 +183,7 @@ export function fold(input: FoldInput): FoldOutput {
     }
 
     s.active = true;
+    s.evidence.push(e.id);
     suggestions.delete(s.rec.id);
     e.cite.forEach((id) => { const sid = input.sessionOf.get(id); if (sid) s.sessions.add(sid); });
     if (ms(e.at) > ms(s.lastAt)) s.lastAt = e.at;
@@ -254,6 +256,7 @@ export function fold(input: FoldInput): FoldOutput {
       id: s.rec.id, name: s.name, goal: s.rec.goal, doneCondition: s.doneCondition, doneConditionConfirmed: s.conditionConfirmed,
       status: s.status!, basis: s.basis, basisNote: s.basisNote, basisEvidenceId: s.basisEvidenceId, inPlan: s.inPlan,
       blocker: s.status === 'blocked' ? s.blocker : null, sessions: [...s.sessions], history: s.history, lastAt: s.lastAt,
+      evidenceIds: s.evidence,
     }));
   // 版本里的名字跟着改名走
   const nameOf = new Map(out.tasks.map((t) => [t.id, t.name]));

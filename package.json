@@ -10,7 +10,8 @@
   "scripts": {
     "test": "node --no-warnings --test \"tests/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "corpus": "node --no-warnings src/cli.ts"
+    "corpus": "node --no-warnings src/cli.ts",
+    "mac-app": "bash scripts/make-mac-app.sh"
   },
   "dependencies": {
     "zod": "^4.6.2"

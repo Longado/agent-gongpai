@@ -16,31 +16,38 @@ import { deepseek } from './extract/model.ts';
 import { buildProjectView } from './engine/view.ts';
 import { buildContext } from './engine/context.ts';
 import { runEval, formatReport } from './eval.ts';
-import { STATUS_LABEL } from './contracts.ts';
+import { gitRoot } from './ingest/common.ts';
+import { renderScene, renderHome, useColor } from './tui.ts';
 
-const HELP = `用法：npm run corpus -- <命令>
+const HELP = `Working Corpus · 用法：corpus <命令>
+
+  （不带命令）                                    所有项目的概况
+  app [--port 4173] [--no-open]                     打开窗口：后台启动本地服务，用独立窗口打开
+  stop                                             停掉后台的本地服务
+  show [--project <编号>]                           在终端看项目现场；在项目目录里可以不写 --project
+  context --task <T01> [--project <编号>]           打印续接上下文，贴进任何 AI 工具接着干
 
   project add <名称> --dir <目录> [--goal <目标>]   建项目并绑定目录（可多次 --dir）
   project list                                     列出项目
   project pause|resume --project <编号>              暂停或恢复采集（已有数据保留）
-  sync [--no-extract] [--quiet]                    读取 Claude Code、Codex、VS Code 聊天的新对话，并整理；--quiet 不输出（给钩子用）
+  sync [--no-extract] [--quiet]                    读取 Claude Code、Codex、VS Code 聊天的新对话，并整理
   import <文件> --project <编号> --label <来源> --title <标题> [--partial] [--date YYYY-MM-DD]
   takeout <zip、文件夹或 json> --project <编号> [--pick 编号,编号 | --all]
                                                    Google Takeout 的 Gemini 历史：不带 --pick 先列出对话
   extract [--project <编号>] [--fresh]              只整理，不读取；--fresh 清掉旧证据从头整理（任务编号和修正保留）
-  show --project <编号>                             打印项目现场
-  context --project <编号> --task <T01>              打印续接上下文
-  serve [--port 4173]                              打开本地网页
-  mcp                                              以 MCP 连接器方式运行（stdio），给 Claude Code、Codex、Cursor 读项目现场，见 docs/MCP.md
+  serve [--port 4173]                              在前台运行本地服务
+  mcp                                              以 MCP 连接器方式运行（stdio），见 docs/MCP.md
   eval [--only S1]                                 用真模型跑样本评估
-  demo                                             用样本数据建两个示例项目（不调用模型）`;
+  demo                                             用样本数据建两个示例项目（不调用模型）
+
+没装全局命令时，把 corpus 换成 npm run corpus --`;
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
     dir: { type: 'string', multiple: true }, goal: { type: 'string' }, project: { type: 'string' }, task: { type: 'string' },
     label: { type: 'string' }, title: { type: 'string' }, partial: { type: 'boolean' }, date: { type: 'string' },
-    'no-extract': { type: 'boolean' }, fresh: { type: 'boolean' }, quiet: { type: 'boolean' }, pick: { type: 'string' }, all: { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
+    'no-extract': { type: 'boolean' }, fresh: { type: 'boolean' }, quiet: { type: 'boolean' }, 'no-open': { type: 'boolean' }, pick: { type: 'string' }, all: { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
   },
 });
 
@@ -55,6 +62,18 @@ const need = (v: string | undefined, name: string): string => {
   if (!v) { console.error(`缺少 --${name}\n\n${HELP}`); process.exit(2); }
   return v;
 };
+
+/** 项目参数可以省略：先按当前目录找，只有一个项目时就用它。 */
+function pickProject(d: ReturnType<typeof db>, given: string | undefined): string {
+  if (given) return given;
+  const cwd = process.cwd();
+  const hit = d.projectForDir(gitRoot(cwd)) ?? d.projectForDir(cwd);
+  if (hit) return hit;
+  const all = d.listProjects();
+  if (all.length === 1) return all[0].id;
+  console.error(all.length ? `当前目录没有绑定项目，请用 --project 指定：\n${all.map((p) => `  ${p.id}  ${p.name}`).join('\n')}` : '还没有项目。先运行 corpus demo 或 corpus project add');
+  process.exit(2);
+}
 
 async function extractAll(d: ReturnType<typeof db>, projectIds: string[]) {
   const model = deepseek();
@@ -109,21 +128,26 @@ async function main() {
     await extractAll(d, values.project ? [values.project] : d.listProjects().map((p) => p.id));
   } else if (cmd === 'show') {
     const d = db();
-    const id = need(values.project, 'project');
-    const v = buildProjectView(d, id);
-    console.log(`# ${d.getProject(id)?.name}`);
-    if (v.lastPosition) console.log(`上次停在：${v.lastPosition.label} · ${v.lastPosition.at.slice(0, 16)} · ${v.lastPosition.text.slice(0, 60).replace(/\n/g, ' ')}`);
-    console.log(`规划：${v.plan.noPlan ? '已读取的记录里没有明确规划' : v.plan.versions.at(-1)!.items.map((i) => (i.change === 'cancelled' ? `~~${i.name}~~` : i.name)).join('、')}`);
-    if (v.coverageWarning) console.log('注意：有来源只读到一部分');
-    for (const t of v.tasks) console.log(`  ${STATUS_LABEL[t.status].padEnd(4)} ${t.id.split('/').at(-1)} ${t.name} — ${t.basisNote}`);
-    console.log('下一步：');
-    v.next.forEach((n, i) => console.log(`  ${i + 1}. ${n.action}（${n.reason}）`));
-    if (v.pending.length) console.log(`待确认 ${v.pending.length} 条`);
+    const id = pickProject(d, values.project);
+    console.log(renderScene(d.getProject(id)!, buildProjectView(d, id), { color: useColor() }));
+    d.logUsage(id, 'show_cli');
   } else if (cmd === 'context') {
     const d = db();
-    const pid = need(values.project, 'project');
+    const pid = pickProject(d, values.project);
     console.log(buildContext(d, pid, `${pid}/${need(values.task, 'task')}`));
     d.logUsage(pid, 'context_cli');
+  } else if (cmd === 'app') {
+    const { startServer, openWindow } = await import('./app.ts');
+    const port = Number(values.port ?? 4173);
+    const state = await startServer(port);
+    const url = `http://127.0.0.1:${port}`;
+    if (values['no-open']) console.log(`本地服务${state === 'running' ? '已经在运行' : '已启动'}：${url}`);
+    else console.log(`已用${openWindow(url)}打开 ${url}${state === 'started' ? '。停掉服务：corpus stop' : ''}`);
+  } else if (cmd === 'stop') {
+    const { stopServer } = await import('./app.ts');
+    console.log(stopServer() ? '已停掉后台的本地服务' : '后台没有在运行的本地服务');
+  } else if (cmd === 'help' || cmd === '--help' || cmd === '-h') {
+    console.log(HELP);
   } else if (cmd === 'serve') {
     const { serve } = await import('./server.ts');
     serve(db(), Number(values.port ?? 4173));
@@ -133,7 +157,7 @@ async function main() {
   } else if (cmd === 'demo') {
     const { loadDemo } = await import('./demo.ts');
     const ids = loadDemo(db());
-    console.log(`已建示例项目：${ids.join('、')}。运行 npm run corpus -- serve 查看`);
+    console.log(`已建示例项目：${ids.join('、')}。在终端看：corpus show --project ${ids[0]}；打开窗口：corpus app`);
   } else if (cmd === 'eval') {
     console.log('用真模型跑样本，推理模型每批要几十秒……');
     const { reports, outDir } = await runEval(deepseek(), values.only);
@@ -141,8 +165,13 @@ async function main() {
     console.log(text);
     console.log(`\n原始输出存在 ${outDir}`);
     process.exit(redLineFailed ? 1 : 0);
+  } else if (!cmd) {
+    const d = db();
+    console.log(renderHome(d.listProjects().map((p) => ({ project: p, view: buildProjectView(d, p.id) })), { color: useColor() }));
   } else {
+    console.error(`不认识的命令：${cmd}\n`);
     console.log(HELP);
+    process.exit(2);
   }
 }
 

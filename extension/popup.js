@@ -33,6 +33,23 @@ async function readPage() {
   if (!page.turns.length) { $('status').innerHTML = '<span class="err">没有读到消息。可能页面改版了，请粘贴导入</span>'; return; }
   $('status').innerHTML = `当前页面已加载 ${page.turns.length} 条消息${page.partial ? '<span class="warn">，更早的还没加载，只会导入已加载的部分</span>' : ''}`;
   $('go').disabled = false;
+  await showBinding();
+}
+
+// 这段对话绑定到哪个项目、自动同步的情况
+async function showBinding() {
+  const key = page && self.corpusLib.conversationKey(page.url);
+  const b = key && ((await chrome.storage.local.get('bindings')).bindings || {})[key];
+  if (!b) { $('bound').textContent = ''; return; }
+  const when = b.lastSyncAt ? new Date(b.lastSyncAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '还没有';
+  $('bound').innerHTML = `已绑定到「${esc(b.projectName)}」，自动同步中 · 上次 ${esc(when)}${b.lastNew != null ? `，补了 ${b.lastNew} 条` : ''}${b.lastError ? ` · <span class="err">${esc(b.lastError)}</span>` : ''} · <a href="#" id="unbind">停止自动同步</a>`;
+  $('unbind').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const all = (await chrome.storage.local.get('bindings')).bindings || {};
+    delete all[key];
+    await chrome.storage.local.set({ bindings: all });
+    $('bound').textContent = '已停止自动同步，已经加入的内容保留';
+  });
 }
 
 $('go').addEventListener('click', async () => {
@@ -46,6 +63,13 @@ $('go').addEventListener('click', async () => {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || `失败（${r.status}）`);
     await chrome.storage.local.set({ lastProject: $('project').value });
+    const key = self.corpusLib.conversationKey(page.url);
+    if ($('auto').checked && key) {
+      const all = (await chrome.storage.local.get('bindings')).bindings || {};
+      all[key] = { projectId: $('project').value, projectName: $('project').selectedOptions[0]?.textContent || '', server: base, lastSignature: self.corpusLib.signature(page.turns), lastSyncAt: new Date().toISOString(), lastNew: d.newMessages, lastError: null };
+      await chrome.storage.local.set({ bindings: all });
+      await showBinding();
+    }
     $('result').textContent = `已加入：新消息 ${d.newMessages} 条${d.newMessages === 0 ? '（这段之前导入过）' : ''}。回到 Working Corpus 点"同步"整理。`;
   } catch (e) {
     $('result').innerHTML = `<span class="err">${esc(e.message)}</span>`;

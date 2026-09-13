@@ -61,7 +61,9 @@ function align(oldKeys: string[], newKeys: string[]): (number | null)[] {
 
 export function importText(db: Db, input: ImportInput): { sessionId: string; newMessages: number; unsure: boolean } {
   const turns = splitSpeakers(input.text).map((t) => ({ ...t, text: redact(t.text) }));
-  const sessionId = `im-${hash(`${input.projectId}|${input.label}|${input.title}`)}`;
+  // 有链接的按链接认同一段对话（Gemini 的标题会晚一步生成，按标题认会把一段拆成两段）；没链接的按标题
+  const identity = input.url ? `url:${input.url.replace(/[?#].*$/, '')}` : input.title;
+  const sessionId = `im-${hash(`${input.projectId}|${input.label}|${identity}`)}`;
   const label = input.date ? `${input.label}（日期由你标注）` : input.label;
   db.upsertSession({ id: sessionId, source: 'import', label, projectId: input.projectId, cwd: null, title: input.title, coverage: input.coverage ?? 'full', url: input.url || null });
   db.raw.prepare('UPDATE sessions SET coverage = ?, label = ? WHERE id = ?').run(input.coverage ?? 'full', label, sessionId);

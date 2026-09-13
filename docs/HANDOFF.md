@@ -10,6 +10,7 @@
 - 第 11 轮完成：重新整理（保留修正和任务编号）、移出误归类会话、工具版本。
 - 第 12 轮完成：前端改成 ThreeUI 风格的深色控制台界面，新增语料带；像素 logo 在 `web/logo.svg`。
 - 第 13 轮完成：拆分任务、结果线索（`src/engine/hints.ts`）、续接上下文导出 Markdown。
+- 第 21 轮完成：Gemini 扩展自动同步（`extension/background.js`、`lib.js`）；有链接的导入按链接认会话。需求文档 v0.2 的 P0、P1 全部完成。
 - 第 20 轮完成：任务可以移到别的项目；来源冲突进待确认（规则见 `docs/contracts.md`）；数据库事务改成可重入；示例数据的会话编号加了项目前缀。
 - 第 19 轮完成：Gemini 浏览器扩展（`extension/`，见 `docs/EXTENSION.md`）。需求文档 v0.2 的全部 P0 到此补齐。
 - 第 18 轮完成：VS Code 自带聊天（`src/ingest/vscode.ts`）。用户在 VS Code 里主要用 Claude Code、Codex 扩展，这两个本来就覆盖；自带聊天本机几乎是空的，解析在真实文件上验证过。
@@ -18,7 +19,7 @@
 - 第 15 轮完成：Claude Code 插件（`.claude-plugin/`、`plugin/`、`bin/corpus`），见 `docs/PLUGIN.md`。
 - 第 14 轮完成：导入原页面链接、决定“已被替代”（提示词 `evidence-v4`，新增样本 S7）、打开页面自动只读同步。
 - 数据和配置默认在 `~/.working-corpus/`（`CORPUS_HOME`、`CORPUS_DB` 可改）；密钥读取顺序：环境变量 > 仓库 `.env` > `~/.working-corpus/.env`。
-- 测试 107 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
+- 测试 110 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
 
 ## 下一步
 
@@ -27,8 +28,7 @@
 1. 真实使用：用户自己的项目跑一到两周，看接入设置里的使用记录（打开、复制、修正次数）。修正次数高的地方就是提示词或引擎该改的地方。
 2. 网页版 Gemini 的 Takeout 格式：用户在 Takeout 勾“我的活动 → Gemini Apps”（JSON）导一份，校准解析。
 3. 扩展在登录后的真实 Gemini 页面上点一次，核对条数；页面改版就改 `extension/extract.js` 的选择器。
-4. 第 21 轮：Gemini 后台自动同步（进行中）。
-5. 以后：消息编辑版本、下一步的“前置条件”。
+4. 以后：消息编辑版本、下一步的“前置条件”。
 
 ## 环境和坑
 

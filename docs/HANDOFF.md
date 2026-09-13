@@ -10,6 +10,7 @@
 - 第 11 轮完成：重新整理（保留修正和任务编号）、移出误归类会话、工具版本。
 - 第 12 轮完成：前端改成 ThreeUI 风格的深色控制台界面，新增语料带；像素 logo 在 `web/logo.svg`。
 - 第 13 轮完成：拆分任务、结果线索（`src/engine/hints.ts`）、续接上下文导出 Markdown。
+- 第 15 轮完成：Claude Code 插件（`.claude-plugin/`、`plugin/`、`bin/corpus`），见 `docs/PLUGIN.md`。
 - 第 14 轮完成：导入原页面链接、决定“已被替代”（提示词 `evidence-v4`，新增样本 S7）、打开页面自动只读同步。
 - 数据和配置默认在 `~/.working-corpus/`（`CORPUS_HOME`、`CORPUS_DB` 可改）；密钥读取顺序：环境变量 > 仓库 `.env` > `~/.working-corpus/.env`。
 - 测试 85 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
@@ -18,7 +19,7 @@
 
 需求文档 v0.2 的 P0 项已经基本补齐，剩下的见 `docs/REQUIREMENTS-GAP.md`。下一版按价值排：
 
-1. **第 15 轮 Claude Code 插件**：仓库根目录加 `.claude-plugin/`（marketplace.json + plugin.json），插件带 MCP 配置、一个“按现场继续”的技能、会话结束时只读同步的钩子。插件缓存里没有 `node_modules`，需要一个启动脚本在缺依赖时先装。只用 `claude --plugin-dir` 一次性加载测试，不改全局配置。
+1. ~~第 15 轮 Claude Code 插件~~（已完成）：仓库根目录加 `.claude-plugin/`（marketplace.json + plugin.json），插件带 MCP 配置、一个“按现场继续”的技能、会话结束时只读同步的钩子。插件缓存里没有 `node_modules`，需要一个启动脚本在缺依赖时先装。只用 `claude --plugin-dir` 一次性加载测试，不改全局配置。
 2. **第 16 轮 Google Takeout 导入**：解析 Gemini Apps 活动导出（My Activity），按对话切会话；先用手写的样本文件做测试，格式以官方导出为准，拿不到真实样本就在文档里写明。
 3. 以后：Gemini 浏览器扩展、Cursor、把任务移到别的项目、来源冲突展示、消息编辑版本。
 

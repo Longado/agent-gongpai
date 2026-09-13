@@ -68,13 +68,14 @@ npm run corpus -- serve                               # 在页面上点"同步"
 
 ## 在 AI 工具里直接取
 
-不想复制粘贴，就把 Working Corpus 接到 AI 工具上。它提供三个只读工具：列出项目、看项目现场、生成某个任务的续接上下文。在 Claude Code 里注册：
+不想复制粘贴，就把 Working Corpus 接到 AI 工具上。Claude Code 用户直接装插件：
 
 ```
-claude mcp add corpus -- node --no-warnings --env-file-if-exists=<仓库>/.env <仓库>/src/cli.ts mcp
+/plugin marketplace add Longado/working-corpus
+/plugin install working-corpus@working-corpus
 ```
 
-之后在对话里说"先看一下 Working Corpus 里的项目现场，然后按续接上下文继续做 T03"就行。Codex 和 Cursor 的配置见 `docs/MCP.md`。
+之后在对话里说"先看一下项目现场，然后按续接上下文继续做 T03"就行。插件提供三个只读工具，会话结束时还会在后台只读同步一次，见 `docs/PLUGIN.md`。Codex 和 Cursor 用 MCP 配置接入，见 `docs/MCP.md`。
 
 ## 它是怎么工作的
 
@@ -124,6 +125,7 @@ npm run corpus -- eval      # 用真模型跑六个样本，硬红线有一条�
 | `docs/contracts.md` | 模块之间的约定、状态规则 |
 | `docs/EVAL.md` | 每次改提示词或换模型的评估记录 |
 | `docs/FORM.md` | 形态研判：插件还是网页 |
+| `docs/PLUGIN.md` | Claude Code 插件：安装、提供什么、验证过什么 |
 | `docs/MCP.md` | MCP 连接器：在 Claude Code、Codex、Cursor 里直接取项目现场 |
 | `docs/DEMO.md` | 演示脚本 |
 | `docs/HANDOFF.md` | 交接：现在到哪了、下一步 |

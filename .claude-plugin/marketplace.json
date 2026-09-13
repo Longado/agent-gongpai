@@ -1,0 +1,12 @@
+{
+  "name": "working-corpus",
+  "owner": { "name": "Longado" },
+  "description": "Working Corpus 的插件市场",
+  "plugins": [
+    {
+      "name": "working-corpus",
+      "source": "./",
+      "description": "看项目现场、按续接上下文继续做；会话结束时只读同步一次。需要本机有 Node 22.18 或更新版本。"
+    }
+  ]
+}

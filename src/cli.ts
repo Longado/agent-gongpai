@@ -21,7 +21,7 @@ const HELP = `用法：npm run corpus -- <命令>
   project add <名称> --dir <目录> [--goal <目标>]   建项目并绑定目录（可多次 --dir）
   project list                                     列出项目
   project pause|resume --project <编号>              暂停或恢复采集（已有数据保留）
-  sync [--no-extract]                              读取 Claude Code 和 Codex 的新对话，并整理
+  sync [--no-extract] [--quiet]                    读取 Claude Code 和 Codex 的新对话，并整理；--quiet 不输出（给钩子用）
   import <文件> --project <编号> --label <来源> --title <标题> [--partial] [--date YYYY-MM-DD]
   extract [--project <编号>] [--fresh]              只整理，不读取；--fresh 清掉旧证据从头整理（任务编号和修正保留）
   show --project <编号>                             打印项目现场
@@ -36,7 +36,7 @@ const { positionals, values } = parseArgs({
   options: {
     dir: { type: 'string', multiple: true }, goal: { type: 'string' }, project: { type: 'string' }, task: { type: 'string' },
     label: { type: 'string' }, title: { type: 'string' }, partial: { type: 'boolean' }, date: { type: 'string' },
-    'no-extract': { type: 'boolean' }, fresh: { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
+    'no-extract': { type: 'boolean' }, fresh: { type: 'boolean' }, quiet: { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
   },
 });
 
@@ -78,9 +78,10 @@ async function main() {
     const d = db();
     const cc = syncClaudeCode(d);
     const cx = syncCodex(d);
+    d.logUsage(null, 'sync');
+    if (values.quiet && values['no-extract']) return; // 钩子调用：只读，什么都不输出
     console.log(`Claude Code：新消息 ${cc.newMessages}（${cc.files} 个会话）；Codex：新消息 ${cx.newMessages}（${cx.files} 个会话）；未绑定目录的会话 ${cc.skippedSessions + cx.skippedSessions} 个没有读取`);
     if (cc.badLines + cx.badLines) console.log(`格式异常的行 ${cc.badLines + cx.badLines} 条，已跳过，已有数据不受影响`);
-    d.logUsage(null, 'sync');
     if (!values['no-extract']) await extractAll(d, d.listProjects().map((p) => p.id));
   } else if (cmd === 'import') {
     const d = db();

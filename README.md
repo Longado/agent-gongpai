@@ -17,11 +17,11 @@
 
 在线演示不用安装，打开就是一个“记账小程序”的示例项目：六段对话来自 Gemini 网页、Codex 和 Claude Code，页面上能看任务状态、规划的两个版本、被替代的决定、每条结论的原话，也能取续接上下文。演示是只读的。
 
-<p align="center"><img alt="终端里：corpus 看所有项目，corpus show 看项目现场" src="docs/cli.png" width="760"></p>
+<p align="center"><img alt="终端录屏：corpus 看所有项目，corpus show 看项目现场，corpus context 取续接上下文" src="docs/media/terminal.gif" width="760"></p>
 
-<p align="center"><img alt="桌面窗口：AI 说导出做完了，Working Corpus 显示待验证，下一步是去验证它" src="docs/screenshot.png" width="760"></p>
+<p align="center"><img alt="窗口录屏：点依据看 AI 原话、点继续拿续接上下文、看两版规划、确认完成" src="docs/media/window.gif" width="760"></p>
 
-<sub>两张图都是示例数据。窗口里那个任务，AI 两次说导出做好了，中间用户报告过文件打不开，Working Corpus 把它标成“待验证”，不算完成。</sub>
+<sub>两段录屏都是示例项目“记账小程序”，由脚本自动录制，不含真实对话。高清版：<a href="docs/media/terminal.mp4">终端 MP4</a> · <a href="docs/media/window.mp4">窗口 MP4</a>。怎么重录见 <a href="docs/DEMO.md">演示脚本</a>。</sub>
 
 ## 三分钟上手
 

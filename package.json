@@ -11,7 +11,10 @@
     "test": "node --no-warnings --test \"tests/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "corpus": "node --no-warnings src/cli.ts",
-    "mac-app": "bash scripts/make-mac-app.sh"
+    "mac-app": "bash scripts/make-mac-app.sh",
+    "record:terminal": "vhs demo/terminal.tape",
+    "record:window": "node --no-warnings demo/window.ts",
+    "record": "npm run record:terminal && npm run record:window"
   },
   "dependencies": {
     "zod": "^4.6.2"

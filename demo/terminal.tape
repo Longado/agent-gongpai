@@ -1,0 +1,47 @@
+# 终端录屏：用 VHS 跑（brew install vhs），在仓库根目录执行 npm run record:terminal
+# 数据在临时目录里，只有示例项目“记账小程序”，不读你本机的对话。
+Output docs/media/terminal.gif
+Output docs/media/terminal.mp4
+
+Set Shell bash
+Set FontSize 19
+Set Width 1320
+Set Height 800
+Set Padding 28
+Set TypingSpeed 45ms
+Set Theme "Catppuccin Mocha"
+Set WindowBar Colorful
+
+Hide
+Type 'export CORPUS_HOME="$(mktemp -d)" PATH="$PWD/bin:$PATH" PS1="$ " && corpus demo > /dev/null && clear'
+Enter
+Sleep 2s
+Show
+
+Type "# 所有项目，一行一个"
+Sleep 400ms
+Enter
+Type "corpus"
+Sleep 300ms
+Enter
+Sleep 4s
+
+Type "clear"
+Enter
+Type "# 一个项目的现场：规划、任务、下一步"
+Sleep 400ms
+Enter
+Type "corpus show"
+Sleep 300ms
+Enter
+Sleep 7s
+
+Type "clear"
+Enter
+Type "# 换个工具接着做：取“月度导出”的续接上下文"
+Sleep 400ms
+Enter
+Type "corpus context --task T04"
+Sleep 300ms
+Enter
+Sleep 8s

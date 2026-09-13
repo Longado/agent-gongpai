@@ -101,7 +101,17 @@ export function serve(db: Db, port: number) {
     const method = req.method ?? 'GET';
     // 防 DNS 重绑定：只接受本机地址访问
     if (!/^(127\.0\.0\.1|localhost):\d+$/.test(req.headers.host ?? '')) throw new HttpError(403, '只允许本机访问');
-    // 防跨站请求：写操作必须带自定义请求头（浏览器跨站发不出这个头）
+    // 浏览器扩展（chrome-extension://）是唯一允许跨域的来源；网站来源一律不放行
+    const origin = req.headers.origin;
+    const fromExtension = typeof origin === 'string' && /^(chrome|moz)-extension:\/\/[a-z0-9-]+$/i.test(origin);
+    if (method === 'OPTIONS') {
+      if (!fromExtension) throw new HttpError(403, '只允许本机页面和浏览器扩展访问');
+      res.writeHead(204, { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type, x-corpus', 'access-control-max-age': '600', vary: 'origin' });
+      res.end();
+      return;
+    }
+    if (fromExtension) { res.setHeader('access-control-allow-origin', origin); res.setHeader('vary', 'origin'); }
+    // 防跨站请求：写操作必须带自定义请求头（网站跨站发不出这个头）
     if (method !== 'GET' && req.headers['x-corpus'] !== '1') throw new HttpError(403, '缺少请求头');
 
     if (method === 'GET' && STATIC[url.pathname]) {

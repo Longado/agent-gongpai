@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Working Corpus · Gemini",
+  "version": "0.1.0",
+  "description": "把 Gemini 网页上当前已加载的对话加入本机 Working Corpus 的项目记忆。数据只发到 127.0.0.1。",
+  "action": { "default_popup": "popup.html", "default_title": "加入项目记忆" },
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "content_scripts": [{ "matches": ["https://gemini.google.com/*"], "js": ["extract.js", "content.js"], "run_at": "document_idle" }]
+}

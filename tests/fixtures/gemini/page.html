@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>fixture</title></head><body>
+<div class="conversation selected"><div class="conversation-title">记账小程序需求</div></div>
+<infinite-scroller>
+<div class="conversation-container">
+  <user-query><div class="query-text"><p class="query-text-line">第一版要有记账录入、分类统计。</p></div></user-query>
+  <model-response><message-content><div class="markdown"><p>好的，按这两项推进。</p><ul><li>录入</li><li>统计</li></ul></div></message-content></model-response>
+</div>
+<div class="conversation-container">
+  <user-query><div class="query-text"><p class="query-text-line">预算提醒先不要。</p></div></user-query>
+  <model-response><message-content><div class="markdown"><p>明白。</p></div></message-content><div class="thinking">这一段不该被读进去</div></model-response>
+</div>
+</infinite-scroller>
+<script src="../../../extension/extract.js"></script>
+<script>
+  const r = window.corpusExtract(document);
+  document.title = 'RESULT:' + JSON.stringify({ title: r.title, turns: r.turns, partial: r.partial });
+</script>
+</body></html>

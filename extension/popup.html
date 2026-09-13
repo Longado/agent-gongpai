@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>加入项目记忆</title>
+<style>
+body{margin:0;width:320px;padding:14px;font:13px/1.55 -apple-system,"PingFang SC","Noto Sans SC",system-ui,sans-serif;color:#111318;background:#fff}
+h1{font-size:14px;margin:0 0 10px}
+label{display:grid;gap:4px;margin-bottom:10px;color:#4a505e}
+select,input{font:inherit;padding:5px 8px;border:1px solid #cfd3db;border-radius:6px}
+button{font:inherit;padding:7px 12px;border-radius:6px;border:1px solid #111318;background:#111318;color:#fff;cursor:pointer}
+button[disabled]{opacity:.55}
+.s{font:12px/1.5 ui-monospace,Menlo,monospace;color:#6e7584}
+.warn{color:#b8770b}
+.err{color:#c23b34}
+</style></head>
+<body>
+<h1>加入项目记忆</h1>
+<div id="status" class="s">读取页面…</div>
+<label>加入到<select id="project"></select></label>
+<label>本机服务地址<input id="server" value="http://127.0.0.1:4173"></label>
+<button id="go" disabled>加入项目记忆</button>
+<div id="result" class="s" style="margin-top:10px"></div>
+<script src="popup.js"></script>
+</body></html>

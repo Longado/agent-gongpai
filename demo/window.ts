@@ -133,7 +133,7 @@ try {
   const recorder = (async () => {
     while (recording) {
       const t = Date.now();
-      const { data } = await page.send('Page.captureScreenshot', { format: 'jpeg', quality: 88 });
+      const { data } = await page.send('Page.captureScreenshot', { format: 'png' }); // 无损：停住的帧完全相同，GIF 才压得小
       frames.push({ t, data });
       await sleep(Math.max(0, 80 - (Date.now() - t)));
     }
@@ -150,16 +150,16 @@ try {
   const dir = join(tmp, 'frames');
   mkdirSync(dir);
   const list = frames.map((f, i) => {
-    const file = join(dir, `${String(i).padStart(5, '0')}.jpg`);
+    const file = join(dir, `${String(i).padStart(5, '0')}.png`);
     writeFileSync(file, Buffer.from(f.data, 'base64'));
     const next = frames[i + 1]?.t ?? f.t + 1500;
     return `file '${file}'\nduration ${((next - f.t) / 1000).toFixed(3)}`;
   });
-  writeFileSync(join(dir, 'list.txt'), `${list.join('\n')}\nfile '${join(dir, `${String(frames.length - 1).padStart(5, '0')}.jpg`)}'\n`);
+  writeFileSync(join(dir, 'list.txt'), `${list.join('\n')}\nfile '${join(dir, `${String(frames.length - 1).padStart(5, '0')}.png`)}'\n`);
   mkdirSync(OUT, { recursive: true });
   const ff = (args: string[]) => { const r = spawnSync('ffmpeg', ['-v', 'error', '-y', ...args], { encoding: 'utf8' }); if (r.status !== 0) throw new Error(r.stderr || '没找到 ffmpeg'); };
   ff(['-f', 'concat', '-safe', '0', '-i', join(dir, 'list.txt'), '-vf', 'fps=25,format=yuv420p', '-c:v', 'libx264', '-crf', '24', '-movflags', '+faststart', join(OUT, 'window.mp4')]);
-  ff(['-i', join(OUT, 'window.mp4'), '-vf', 'fps=10,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle', join(OUT, 'window.gif')]);
+  ff(['-f', 'concat', '-safe', '0', '-i', join(dir, 'list.txt'), '-vf', 'fps=10,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle', join(OUT, 'window.gif')]);
   console.log(`已生成 docs/media/window.mp4 和 window.gif：${frames.length} 帧，${((frames.at(-1)!.t - frames[0].t) / 1000).toFixed(1)} 秒`);
 } finally {
   for (const p of procs) p.kill();

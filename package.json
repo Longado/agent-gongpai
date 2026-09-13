@@ -14,6 +14,7 @@
     "mac-app": "bash scripts/make-mac-app.sh",
     "record:terminal": "vhs demo/terminal.tape",
     "record:window": "node --no-warnings demo/window.ts",
+    "record:explainer": "node --no-warnings demo/explainer.ts",
     "record": "npm run record:terminal && npm run record:window",
     "diagram": "bash scripts/render-diagram.sh"
   },

@@ -13,9 +13,9 @@
 
 它是一个跑在你电脑上的**本地应用**：终端里用 `corpus` 命令，桌面上用一个独立窗口。数据都在本机。
 
-<p align="center"><a href="https://longado.github.io/working-corpus/"><b>▶ 在线演示</b></a>　·　<a href="examples/">示例文件</a>　·　<a href="docs/DEMO.md">演示脚本</a></p>
+<p align="center"><a href="https://longado.github.io/working-corpus/media/explainer.mp4"><b>▶ 4 分钟讲解视频</b></a>　·　<a href="https://longado.github.io/working-corpus/"><b>在线演示</b></a>　·　<a href="examples/">示例文件</a>　·　<a href="docs/DEMO.md">演示脚本</a></p>
 
-在线演示不用安装，打开就是一个“记账小程序”的示例项目：六段对话来自 Gemini 网页、Codex 和 Claude Code，页面上能看任务状态、规划的两个版本、被替代的决定、每条结论的原话，也能取续接上下文。演示是只读的。
+讲解视频是中文配音，先讲为什么做、坚持哪几条原则，再演示终端和窗口，最后讲架构和接下来的打算。在线演示不用安装，打开就是一个“记账小程序”的示例项目：六段对话来自 Gemini 网页、Codex 和 Claude Code，页面上能看任务状态、规划的两个版本、被替代的决定、每条结论的原话，也能取续接上下文。演示是只读的。
 
 <p align="center"><img alt="终端录屏：corpus 看所有项目，corpus show 看项目现场，corpus context 取续接上下文" src="docs/media/terminal.gif" width="760"></p>
 

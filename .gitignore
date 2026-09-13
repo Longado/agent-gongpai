@@ -6,3 +6,4 @@ data/
 .DS_Store
 dist/
 site/
+demo/.voice/

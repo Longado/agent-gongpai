@@ -25,6 +25,7 @@ Enter
 Type "corpus"
 Sleep 300ms
 Enter
+# voice-hold：讲解视频会把下面这行换成“念完稍停”（demo/explainer.ts）
 Sleep 6s
 
 Type@5ms "clear"
@@ -34,6 +35,7 @@ Enter
 Type "corpus show"
 Sleep 300ms
 Enter
+# voice-hold
 Sleep 12s
 
 Type@5ms "clear"
@@ -43,4 +45,5 @@ Enter
 Type "corpus context --task T04"
 Sleep 300ms
 Enter
+# voice-hold
 Sleep 12s

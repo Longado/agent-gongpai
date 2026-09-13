@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Working Corpus 讲解卡片</title>
+<!-- 讲解视频里的理念卡片。demo/explainer.ts 逐张调用 show(编号) 录下来；卡片上的对话都照抄 samples/S8-showcase。 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@600;700&display=swap">
+<style>
+  :root{
+    --ground:#0B0C0F; --surface:#121419; --surface-2:#191C22; --rule:#262A33; --rule-2:#343945;
+    --ink:#ECEEF2; --ink-2:#A6ACB8; --ink-3:#6E7584; --accent:#8C90F6; --accent-soft:#1B1D33;
+    --todo:#8D95A8; --doing:#6AA6F2; --verify:#F0B23F; --done:#46C98B; --block:#F0766C; --idle:#22262F;
+    --sans:"PingFang SC","Hiragino Sans GB","Noto Sans SC",sans-serif;
+    --mono:"JetBrains Mono","SF Mono",Menlo,monospace;
+    --pixel:"Pixelify Sans","JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:1280px;height:800px;overflow:hidden;background:var(--ground);color:var(--ink);font:20px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+  .slide{position:absolute;inset:0;padding:70px 96px;display:none;flex-direction:column;justify-content:center;gap:32px;
+    background:radial-gradient(900px 420px at 70% 30%,rgba(140,144,246,.08),transparent 70%),var(--ground)}
+  .slide.on{display:flex}
+  .slide.on .in{animation:rise .7s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * .32s + .1s)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .eyebrow{font:500 15px/1 var(--mono);color:var(--accent);letter-spacing:2px}
+  h1{margin:0;font:600 46px/1.25 var(--sans);letter-spacing:.5px;text-wrap:balance}
+  .lead{font-size:23px;color:var(--ink-2);max-width:900px}
+  .card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:20px 24px}
+  .chip{display:inline-flex;align-items:center;gap:8px;border:1.5px solid currentColor;border-radius:7px;padding:6px 12px;font:600 19px/1 var(--sans);white-space:nowrap}
+  .chip::before{content:"";width:9px;height:9px;background:currentColor}
+  .note{font:500 14px/1 var(--mono);color:var(--ink-3)}
+  .foot{margin-top:14px;font-size:22px;color:var(--ink-2);display:flex;align-items:center;gap:12px}
+  .foot::before{content:"";width:10px;height:10px;background:var(--accent)}
+  .who{font:500 13px/1 var(--mono);color:var(--ink-3);margin-right:8px}
+
+  /* 片头：像素语料带在背后慢慢亮起来 */
+  #title{justify-content:center;align-items:flex-start}
+  #title .band{position:absolute;right:96px;top:50%;transform:translateY(-50%);display:grid;grid-template-columns:repeat(11,22px);gap:6px;opacity:.9}
+  #title .band i{width:22px;height:22px;background:var(--idle)}
+  #title.on .band i{animation:lit .5s ease both;animation-delay:calc(var(--d) * 1ms)}
+  @keyframes lit{from{background:var(--idle)}to{background:var(--c)}}
+  #title .logo{display:flex;align-items:center;gap:26px}
+  #title .logo img{width:96px;height:96px;image-rendering:pixelated}
+  #title .brand{font:700 76px/1 var(--pixel);letter-spacing:1px}
+  #title .tag{font-size:27px;color:var(--ink-2);max-width:620px;margin-top:10px}
+
+  /* 对话散在好几个地方 */
+  .scatter{position:relative;height:420px;flex:none}
+  .win{position:absolute;width:500px;background:var(--surface);border:1px solid var(--rule-2);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.45);overflow:hidden}
+  .win .bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface-2);border-bottom:1px solid var(--rule);font:600 16px/1 var(--sans)}
+  .win .bar i{width:10px;height:10px;background:var(--c)}
+  .win .bar span{margin-left:auto;font:400 13px/1 var(--mono);color:var(--ink-3)}
+  .win .m{padding:14px 18px 0;font-size:19px;line-height:1.55;color:var(--ink-2)}
+  .win .m:last-child{padding-bottom:16px}
+  .win .m b{font-weight:500;color:var(--ink)}
+
+  /* 四个问题 */
+  .qs{display:flex;flex-direction:column;gap:18px;margin-top:6px}
+  .q{display:flex;gap:22px;align-items:baseline;font-size:30px;line-height:1.4}
+  .q::before{content:"?";font:700 26px/1 var(--pixel);color:var(--ground);background:var(--accent);width:36px;height:36px;display:inline-grid;place-items:center;flex:none;transform:translateY(4px)}
+
+  /* 只认证据 */
+  .rows{display:flex;flex-direction:column;gap:22px}
+  .ev{display:grid;grid-template-columns:1fr 60px 250px;align-items:center;gap:10px}
+  .bubble{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:22px 26px;font-size:24px}
+  .arrow{font:400 30px/1 var(--mono);color:var(--ink-3);text-align:center}
+  .ev .res{display:flex;flex-direction:column;gap:10px}
+
+  /* 一次判断 */
+  .split{display:grid;grid-template-columns:420px 70px 1fr;align-items:stretch;gap:0}
+  .llm{border:1.5px solid var(--accent);background:linear-gradient(180deg,var(--accent-soft),var(--surface) 70%);border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:16px;box-shadow:0 0 0 7px rgba(140,144,246,.07)}
+  .llm .badge,.code .badge{align-self:flex-start;font:700 15px/1 var(--mono);padding:7px 11px;border-radius:6px}
+  .llm .badge{background:var(--accent);color:var(--ground)}
+  .code{border:1px solid var(--rule-2);background:var(--surface);border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:18px}
+  .code .badge{border:1px solid var(--rule-2);color:var(--ink)}
+  .big{font-size:26px;line-height:1.5}
+  .mid{display:grid;place-items:center;font:400 34px/1 var(--mono);color:var(--ink-3)}
+  .tags{display:flex;flex-wrap:wrap;gap:12px}
+  .tag2{font-size:21px;border:1px solid var(--rule-2);border-radius:8px;padding:8px 14px;background:var(--surface-2)}
+
+  /* 先给人看 */
+  .pipe{display:grid;grid-template-columns:1fr 64px 1.25fr 64px 1fr;align-items:center}
+  .pipe .card{min-height:230px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+  .pipe .card h3{margin:0;font:600 26px/1.3 var(--sans)}
+  .pipe .card p{margin:0;font-size:19px;color:var(--ink-2)}
+  .pipe .hero{border:1.5px solid var(--accent);box-shadow:0 0 0 7px rgba(140,144,246,.07)}
+  .mini{display:grid;grid-template-columns:repeat(12,14px);gap:4px}
+  .mini i{width:14px;height:14px;background:var(--c,var(--idle))}
+
+  /* 本机 */
+  .locals{display:flex;flex-direction:column;gap:18px}
+  .local{display:flex;gap:22px;align-items:center;font-size:30px}
+  .local i{width:18px;height:18px;background:var(--done);flex:none;box-shadow:0 0 0 5px rgba(70,201,139,.15)}
+  .local span{color:var(--ink-3);font:400 17px/1 var(--mono);margin-left:auto}
+
+  /* 例子：时间线 */
+  .tl{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:6px}
+  .ses{border-top:4px solid var(--c);background:var(--surface);border-radius:0 0 10px 10px;padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+  .ses .d{font:500 15px/1 var(--mono);color:var(--ink-3)}
+  .ses .t{font:600 22px/1.3 var(--sans)}
+  .ses .x{font-size:18px;color:var(--ink-2);line-height:1.5}
+
+  /* 接下来 */
+  .nexts{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .nexts .card{display:flex;flex-direction:column;gap:12px;padding:28px}
+  .nexts h3{margin:0;font:600 28px/1.3 var(--sans)}
+  .nexts p{margin:0;font-size:20px;color:var(--ink-2)}
+  .later{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:20px;color:var(--ink-2)}
+
+  /* 片尾 */
+  #end{justify-content:center;align-items:center;text-align:center;gap:26px}
+  #end img{width:84px;height:84px;image-rendering:pixelated}
+  #end .brand{font:700 64px/1 var(--pixel)}
+  #end .url{font:500 26px/1.4 var(--mono);color:var(--ink)}
+  #end .url2{font:400 20px/1.4 var(--mono);color:var(--ink-2)}
+  #end .pills{display:flex;gap:12px}
+  #end .pills span{font-size:18px;border:1px solid var(--rule-2);border-radius:999px;padding:6px 16px;color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<section class="slide" id="title">
+  <div class="band" id="band"></div>
+  <div class="logo in"><img src="../web/logo.svg" alt=""><div class="brand">Working Corpus</div></div>
+  <div class="tag in" style="--i:1">把散在各个 AI 工具里的对话，整理成一页有证据的项目现场</div>
+</section>
+
+<section class="slide" id="scatter">
+  <div class="eyebrow in">问题</div>
+  <h1 class="in" style="--i:1">同一个项目，对话散在三个工具里</h1>
+  <div class="scatter">
+    <div class="win in" style="--i:2;left:0;top:10px;transform:rotate(-1.5deg);--c:#4F8DF5">
+      <div class="bar"><i></i>Gemini 网页<span>9 月 8 日</span></div>
+      <div class="m"><span class="who">你</span><b>第一版要有：登录、记账录入、分类统计、月度导出、云同步。</b></div>
+      <div class="m"><span class="who">AI</span>好的，按这五项推进。另外建议加一个预算提醒。</div>
+    </div>
+    <div class="win in" style="--i:3;left:330px;top:215px;transform:rotate(1.2deg);--c:#D97757">
+      <div class="bar"><i></i>Claude Code<span>9 月 11 日</span></div>
+      <div class="m"><span class="who">你</span><b>实现月度导出，导出成表格文件。</b></div>
+      <div class="m"><span class="who">AI</span>月度导出已完成，文件生成在 exports/2026-09.csv。</div>
+    </div>
+    <div class="win in" style="--i:4;left:620px;top:0;transform:rotate(-.8deg);--c:#9AA0AC">
+      <div class="bar"><i></i>Codex<span>9 月 12 日</span></div>
+      <div class="m"><span class="who">你</span><b>导出的文件打不开，提示格式错误。</b></div>
+      <div class="m"><span class="who">AI</span>是编码问题，已经改成 UTF-8 带 BOM，修好了。</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="questions">
+  <div class="eyebrow in">每次回来，都在问</div>
+  <div class="qs">
+    <div class="q in" style="--i:1">我最初想做什么？后来改过哪些要求？</div>
+    <div class="q in" style="--i:2">哪些真的做完了，哪些只是 AI 说做完了？</div>
+    <div class="q in" style="--i:3">现在卡在哪，下一步该做什么？</div>
+    <div class="q in" style="--i:4">换一个工具，怎样不用把项目重新讲一遍？</div>
+  </div>
+</section>
+
+<section class="slide" id="evidence">
+  <div class="eyebrow in">理念一</div>
+  <h1 class="in" style="--i:1">只认证据</h1>
+  <div class="rows">
+    <div class="ev in" style="--i:2">
+      <div class="bubble"><span class="who">AI</span>月度导出已完成，文件生成在 exports/2026-09.csv。</div>
+      <div class="arrow">→</div>
+      <div class="res"><span class="chip" style="color:var(--verify)">待验证</span><span class="note">依据：AI 自述</span></div>
+    </div>
+    <div class="ev in" style="--i:3">
+      <div class="bubble"><span class="who">你</span>登录我试过了，没问题。</div>
+      <div class="arrow">→</div>
+      <div class="res"><span class="chip" style="color:var(--done)">已完成</span><span class="note">依据：你确认的</span></div>
+    </div>
+  </div>
+  <div class="foot in" style="--i:4">每个状态，都能点回那句原话</div>
+</section>
+
+<section class="slide" id="judgment">
+  <div class="eyebrow in">理念二</div>
+  <h1 class="in" style="--i:1">大模型只做一次判断，其余都是代码</h1>
+  <div class="split">
+    <div class="llm in" style="--i:2">
+      <span class="badge">大模型</span>
+      <div class="big">读对话，标出哪句话说明了哪个任务发生了什么</div>
+      <div class="note" style="font-size:16px;color:var(--ink-2)">每条证据必须引用原话</div>
+    </div>
+    <div class="mid in" style="--i:3">→</div>
+    <div class="code in" style="--i:3">
+      <span class="badge">代码 · 按规则算</span>
+      <div class="tags">
+        <span class="tag2">任务状态</span><span class="tag2">规划第几版</span><span class="tag2">哪个决定被替代</span>
+        <span class="tag2">下一步</span><span class="tag2">前置条件</span><span class="tag2">你的修正优先</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot in" style="--i:4">同样的对话，算出来的结果永远一样</div>
+</section>
+
+<section class="slide" id="people">
+  <div class="eyebrow in">理念三</div>
+  <h1 class="in" style="--i:1">先给人看清楚，再交给下一个 AI</h1>
+  <div class="pipe">
+    <div class="card in" style="--i:2"><h3>各个工具里的对话</h3><p>Gemini 网页、Codex、Claude Code……</p></div>
+    <div class="arrow in" style="--i:2">→</div>
+    <div class="card hero in" style="--i:3"><h3>一页项目现场</h3><p>给你看：做到哪了、依据是什么、下一步做什么</p>
+      <div class="mini" id="mini"></div></div>
+    <div class="arrow in" style="--i:4">→</div>
+    <div class="card in" style="--i:4"><h3>续接上下文</h3><p>给下一个 AI：从正确的地方接着干</p></div>
+  </div>
+</section>
+
+<section class="slide" id="local">
+  <div class="eyebrow in">理念四</div>
+  <h1 class="in" style="--i:1">数据都在你的电脑上</h1>
+  <div class="locals">
+    <div class="local in" style="--i:2"><i></i>只读对话记录，不改原文件</div>
+    <div class="local in" style="--i:3"><i></i>整理时只发送绑定项目的对话，发之前先问你</div>
+    <div class="local in" style="--i:4"><i></i>密钥在读取时就替换掉</div>
+  </div>
+</section>
+
+<section class="slide" id="example">
+  <div class="eyebrow in">看一个例子</div>
+  <h1 class="in" style="--i:1">记账小程序：五天，三个工具，六段对话</h1>
+  <div class="tl">
+    <div class="ses in" style="--i:2;--c:#4F8DF5"><span class="d">9/8 · Gemini 网页</span><span class="t">定需求</span><span class="x">五项功能；AI 提议加预算提醒</span></div>
+    <div class="ses in" style="--i:2.4;--c:#9AA0AC"><span class="d">9/9 · Codex</span><span class="t">登录</span><span class="x">你试过了，没问题</span></div>
+    <div class="ses in" style="--i:2.8;--c:#D97757"><span class="d">9/10 · Claude Code</span><span class="t">记账、改规划</span><span class="x">云同步不做了，改成本地备份</span></div>
+    <div class="ses in" style="--i:3.2;--c:#D97757"><span class="d">9/11 · Claude Code</span><span class="t">月度导出</span><span class="x">AI 说已完成</span></div>
+    <div class="ses in" style="--i:3.6;--c:#9AA0AC"><span class="d">9/12 · Codex</span><span class="t">导出打不开</span><span class="x">改了编码，AI 又说修好了</span></div>
+    <div class="ses in" style="--i:4;--c:#D97757"><span class="d">9/12 · Claude Code</span><span class="t">图表页</span><span class="x">设计稿没给，先停下</span></div>
+  </div>
+</section>
+
+<section class="slide" id="next">
+  <div class="eyebrow in">接下来</div>
+  <h1 class="in" style="--i:1">想做的两件事</h1>
+  <div class="nexts">
+    <div class="card in" style="--i:2"><h3>证据不只来自对话</h3><p>git 提交、测试结果、CI 状态也当证据，“待验证”有更硬的依据</p></div>
+    <div class="card in" style="--i:3"><h3>给每个 AI 一张工牌</h3><p>记下每个工具说完成后被打回几次，看看谁说的“做完了”最靠谱</p></div>
+  </div>
+  <div class="later in" style="--i:4"><span class="note">之后</span>更多网页 AI 来源 · 团队共享 · 独立安装包</div>
+</section>
+
+<section class="slide" id="end">
+  <img class="in" src="../web/logo.svg" alt="">
+  <div class="brand in" style="--i:1">Working Corpus</div>
+  <div class="url in" style="--i:2">github.com/Longado/working-corpus</div>
+  <div class="url2 in" style="--i:3">在线演示 · longado.github.io/working-corpus</div>
+  <div class="pills in" style="--i:4"><span>开源</span><span>数据在本机</span><span>只认证据</span></div>
+</section>
+
+<script>
+  const C = ['var(--done)', 'var(--doing)', 'var(--verify)', 'var(--todo)', 'var(--block)'];
+  // 片头的语料带：11×11 个方块，一部分按任务状态亮起
+  document.getElementById('band').innerHTML = Array.from({ length: 121 }, (_, i) => {
+    const on = (i * 37) % 7 < 3;
+    return `<i style="--c:${on ? C[(i * 13) % 5] : 'var(--idle)'};--d:${300 + ((i * 53) % 160) * 12}"></i>`;
+  }).join('');
+  document.getElementById('mini').innerHTML = Array.from({ length: 36 }, (_, i) => `<i style="--c:${(i * 5) % 3 ? C[(i * 7) % 5] : 'var(--idle)'}"></i>`).join('');
+  window.show = (id) => {
+    document.querySelectorAll('.slide').forEach((s) => s.classList.toggle('on', s.id === id));
+    return !!document.getElementById(id);
+  };
+  show(location.hash.slice(1) || 'title');
+</script>
+</body>
+</html>

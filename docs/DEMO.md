@@ -33,6 +33,7 @@ README 里的两段录屏都由脚本自动录制，只用示例项目“记账�
 | `npm run record:terminal` | `terminal.gif`、`terminal.mp4`，约 37 秒 | [VHS](https://github.com/charmbracelet/vhs)（`brew install vhs`） |
 | `npm run record:window` | `window.gif`、`window.mp4`，约 63 秒 | Chrome、ffmpeg |
 | `npm run record` | 两段都录 | 同上 |
+| `npm run record:explainer` | `explainer.mp4`，约 4 分钟，中文配音 | 以上全部，加上 `.env` 里的 `ELEVENLABS_API_KEY` |
 
 改演示内容只改分镜：终端在 `demo/terminal.tape`，窗口在 `demo/window.ts` 开头的 `SHOTS`。VHS 的帧率别调高：它逐帧截图，截不过来时成片会被压快，字还没看清就切走了。架构图的源文件是 `docs/diagram/architecture.html`，改完 `npm run diagram`。
 
@@ -56,19 +57,20 @@ README 里的两段录屏都由脚本自动录制，只用示例项目“记账�
 | 你验证过“记账录入”，点“确认完成”，它才算已完成 | 回概览，点确认完成 |
 | 下一步最多三条：先验证，再继续，最后才开始新任务 | 滚到下一步 |
 
-## 三分钟讲解视频
+## 讲解视频
 
-想录一段带解说的视频（比赛提交、发给别人看），可以按下面的顺序。画面用上面两段录屏拼，或者自己用 macOS 的截屏工具（Shift+Command+5）录窗口。录之前先 `corpus demo`，窗口调到 1280×800，系统用深色模式。
+`docs/media/explainer.mp4` 由 `npm run record:explainer` 一次生成，也放在在线演示站点上：https://longado.github.io/working-corpus/media/explainer.mp4 。每段画面停多久由配音长度决定，所以声音和画面对得上。
 
-| 时间 | 画面 | 旁白 |
+| 段落 | 画面 | 旁白在哪改 |
 |---|---|---|
-| 0:00 | 标题和 logo | 我每天在 Claude Code、Codex 和网页 AI 之间来回切。隔一天回来，最难的是想起这个项目到底做到哪了。 |
-| 0:15 | 终端：`corpus` | Working Corpus 读这些工具留在本机的对话，按项目整理。一个命令，所有项目一行一个。 |
-| 0:30 | 终端：`corpus show` | 这是一个记账小程序。规划改过两版，每个任务写着依据：是你确认的、原文写明的，还是 AI 自己说的。 |
-| 0:55 | 窗口：概览 | 同一个项目在窗口里。AI 两次说“月度导出”做完了，中间你报告过文件打不开，所以它停在待验证，不算完成。 |
-| 1:20 | 窗口：点“依据” | 每条结论都能点回原话。这句是 AI 的自述。 |
-| 1:35 | 窗口：规划、待确认 | 取消的“云同步”划掉了；AI 自己提的“预算提醒”先放着，你没点头就不算任务。 |
-| 1:55 | 窗口：点“继续” | 要换个工具接着做，点“继续”，复制这段背景：之前失败过、先确认完成条件、哪些不要做。 |
-| 2:15 | 终端或 Codex：粘贴上下文 | 粘到新会话里，下一个 AI 从正确的地方接着干。 |
-| 2:30 | 窗口：确认完成 | 你验证过，点确认完成，状态才变。 |
-| 2:40 | README 或在线演示页 | 大模型只负责把对话标成带引用的证据，状态全由代码算。数据都在本机。在线演示和源码都在 GitHub。 |
+| 问题 | 理念卡片：对话散在三个工具里、每次回来都在问的问题 | `demo/explainer.ts` 的 `INTRO` |
+| 理念 | 只认证据；大模型只做一次判断；先给人看再交给下一个 AI；数据在本机 | 同上 |
+| 演示 | 终端三条命令，桌面窗口七个镜头 | 终端在 `TERMINAL_VOICE`，窗口在 `demo/window.ts` 的分镜 |
+| 架构 | 架构图五列跟着旁白依次亮起 | `ARCH_VOICE` |
+| 接下来 | 两件想做的事，片尾给地址 | `OUTRO` |
+
+卡片画面在 `demo/slides.html`，卡片上的对话都照抄示例项目的原文。
+
+配音用 ElevenLabs 的 `eleven_v3` 模型和中文女声 Anna Su。这是实测挑的：同一句中文念完再转写回来比错字率，`eleven_multilingual_v2` 声调不准，“记账”会念成“几章”，错字率 30% 到 46%；`eleven_v3` 在 0% 到 5%。成片整体转写回来错字率约 2%。换声音用环境变量 `VOICE_ID`。每句配音按文字缓存在 `demo/.voice/`，只改一句就只重新生成那一句。
+
+改完文案建议把成片转写回来核对一遍：中文里夹的产品名最容易念走样，比如“交给 Codex 修”会念成“codiceshow”，改成“交给 Codex 去修”就对了。

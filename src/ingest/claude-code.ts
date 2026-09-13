@@ -68,7 +68,7 @@ export function parseClaudeCodeLines(lines: string[], capturedAt: string): Parse
     const content = d.message?.content;
     const picked = d.type === 'user' ? userText(content) : ((t) => (t ? { role: 'assistant' as const, text: t } : null))(assistantText(content));
     if (!picked) continue;
-    out.messages.push({ id: `cc:${d.uuid}`, sessionId: d.sessionId, role: picked.role, text: redact(picked.text), ts: d.timestamp ?? null, capturedAt });
+    out.messages.push({ id: `cc:${d.uuid}`, sessionId: d.sessionId, role: picked.role, text: redact(picked.text), ts: d.timestamp ?? null, capturedAt, parent: d.parentUuid ? `cc:${d.parentUuid}` : null });
   }
   return out;
 }
@@ -122,6 +122,7 @@ export function syncClaudeCode(db: Db, opts: { root?: string; resolveRoot?: (dir
       let seq = db.maxSeq(head.sessionId);
       const msgs: Message[] = parsed.messages.map((m) => ({ ...m, sessionId: head.sessionId!, seq: ++seq }));
       res.newMessages += db.insertMessages(msgs);
+      if (msgs.length) db.detectBranches(head.sessionId); // 改过重发的旧版本
       db.setCursor(head.sessionId, next);
     }
   }

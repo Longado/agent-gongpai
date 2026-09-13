@@ -380,13 +380,17 @@ async function openEvidence(evId) {
   drawer.hidden = false;
   drawer.innerHTML = '<div class="muted">加载原文…</div>';
   const msgs = await api(`/api/projects/${app.pid}/messages?ids=${encodeURIComponent(ev.cite.join(','))}`);
+  // 改过的消息：把新版本也取回来，放在旧版本下面
+  const newer = [...new Set(msgs.map((m) => m.replacedBy).filter(Boolean))];
+  const latest = newer.length ? new Map((await api(`/api/projects/${app.pid}/messages?ids=${encodeURIComponent(newer.join(','))}`)).map((m) => [m.id, m])) : new Map();
   const who = { user: '你', assistant: 'AI', tool_error: '工具报错' };
   drawer.innerHTML = `<div class="row" style="justify-content:space-between;margin-bottom:10px"><b>原文</b><button class="link" data-act="close-drawer">关闭</button></div>
     <div class="s" style="margin-bottom:10px">${esc(ev.detail)}${ev.reason ? ` · 原因：${esc(ev.reason)}` : ''}</div>
     ${msgs.map((m) => `<div class="msg">
       <div class="s">${esc(m.session?.label)}${m.session?.title ? `「${esc(m.session.title)}」` : ''} · 第 ${m.seq + 1} 条</div>
       <div class="s">${m.ts ? `原始时间 ${fmt(m.ts)}` : `原始时间未知 · 采集于 ${fmt(m.capturedAt)}`}</div>
-      <div><b>${who[m.role]}：</b></div><div class="q">${esc(m.text)}</div>
+      <div><b>${who[m.role]}：</b>${m.replacedBy ? ' <span class="basis b-ai">后来改过，这是旧版本</span>' : ''}</div><div class="q"${m.replacedBy ? ' style="text-decoration:line-through;opacity:.7"' : ''}>${esc(m.text)}</div>
+      ${m.replacedBy && latest.get(m.replacedBy) ? `<div class="s">改成了：</div><div class="q">${esc(latest.get(m.replacedBy).text)}</div>` : ''}
       ${m.session?.coverage === 'partial' ? '<div class="s">覆盖：只读到一部分，前文没加载</div>' : ''}
       ${m.session?.url && /^https?:\/\//.test(m.session.url) ? `<a class="link" href="${esc(m.session.url)}" target="_blank" rel="noopener noreferrer">打开原页面</a>` : ''}
       ${m.session?.source === 'import' ? `<div class="row"><span class="s">发言者认错了？</span><button class="link" data-act="role" data-msg="${esc(m.id)}" data-role="${m.role === 'user' ? 'assistant' : 'user'}">改成${m.role === 'user' ? 'AI' : '你'}</button></div>` : ''}

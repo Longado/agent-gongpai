@@ -12,6 +12,7 @@ export interface FoldInput {
   roles: Map<string, Role>; // 消息当前的发言者（可能被人工改过）
   sessionOf: Map<string, string>; // 消息属于哪个会话
   tsKnown?: Set<string>; // 有原始时间的消息；不传就当全都有
+  replaced?: Set<string>; // 被新版本替代的旧消息
   sessionLabel?: Map<string, string>; // 会话的来源名，写冲突说明用
 }
 
@@ -168,6 +169,7 @@ export function fold(input: FoldInput): FoldOutput {
     }
 
     const e = ev.e;
+    if (input.replaced && e.cite.every((id) => input.replaced!.has(id))) continue; // 只引用旧版本：那句话后来改过，不再参与判断
     const { kind, note } = effectiveKind(e, input.roles);
     const taskId = assigned.get(e.id) ?? (e.taskId === 'none' || e.taskId === 'unknown' ? e.taskId : resolve(e.taskId));
 

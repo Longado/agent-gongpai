@@ -15,6 +15,8 @@ export interface Message {
   text: string;
   ts: string | null; // 原始时间，拿不到就是 null，不伪造
   capturedAt: string; // 采集时间
+  parent?: string | null; // 上级消息（Claude Code 的 parentUuid），用来认出改过重发的分叉
+  replacedBy?: string | null; // 被哪条新版本替代；旧版本保留但不再参与判断
 }
 
 export type Coverage = 'full' | 'partial';

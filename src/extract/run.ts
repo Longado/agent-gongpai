@@ -134,7 +134,7 @@ export async function extractProject(db: Db, projectId: string, model: ModelCall
   // 各会话的新消息切批。同一会话内严格按消息顺序；不同会话之间按时间交错，
   // 这样任务清单按事情发生的顺序长出来
   const queues = db.sessionsForProject(projectId)
-    .map((s) => chunks(db.messagesForSession(s.id, s.extractedUpto), opts.maxChars ?? DEFAULT_MAX_CHARS).map((msgs) => ({ session: s, msgs })))
+    .map((s) => chunks(db.messagesForSession(s.id, s.extractedUpto).filter((m) => !m.replacedBy), opts.maxChars ?? DEFAULT_MAX_CHARS).map((msgs) => ({ session: s, msgs }))) // 旧版本不发给模型
     .filter((q) => q.length > 0);
   const work: { session: Session; msgs: Message[] }[] = [];
   while (queues.some((q) => q.length > 0)) {

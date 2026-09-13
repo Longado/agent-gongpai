@@ -26,6 +26,9 @@ export function openDb(path: string) {
   if (!scols.includes('excluded')) db.exec('ALTER TABLE sessions ADD COLUMN excluded INTEGER NOT NULL DEFAULT 0');
   if (!scols.includes('tool_version')) db.exec('ALTER TABLE sessions ADD COLUMN tool_version TEXT');
   if (!scols.includes('url')) db.exec('ALTER TABLE sessions ADD COLUMN url TEXT');
+  const mcols = (db.prepare('PRAGMA table_info(messages)').all() as { name: string }[]).map((c) => c.name);
+  if (!mcols.includes('parent')) db.exec('ALTER TABLE messages ADD COLUMN parent TEXT');
+  if (!mcols.includes('replaced_by')) db.exec('ALTER TABLE messages ADD COLUMN replaced_by TEXT');
   const ecols = (db.prepare('PRAGMA table_info(evidence)').all() as { name: string }[]).map((c) => c.name);
   if (!ecols.includes('replaces')) db.exec("ALTER TABLE evidence ADD COLUMN replaces TEXT NOT NULL DEFAULT '[]'");
 
@@ -43,6 +46,7 @@ export function openDb(path: string) {
   const toMessage = (r: Row): Message => ({
     id: r.id as string, sessionId: r.session_id as string, seq: Number(r.seq), role: r.role as Role,
     text: r.text as string, ts: (r.ts as string) ?? null, capturedAt: r.captured_at as string,
+    parent: (r.parent as string) ?? null, replacedBy: (r.replaced_by as string) ?? null,
   });
   const toEvidence = (r: Row): StoredEvidence => ({
     id: r.id as string, projectId: r.project_id as string, taskId: r.task_id as string,
@@ -159,7 +163,7 @@ export function openDb(path: string) {
     },
     /** 读进来了但还没整理的消息条数。 */
     unextractedCount(projectId: string): number {
-      return Number(get('SELECT COUNT(*) AS c FROM messages m JOIN sessions s ON s.id = m.session_id WHERE s.project_id = ? AND m.seq > s.extracted_upto', projectId)?.c ?? 0);
+      return Number(get('SELECT COUNT(*) AS c FROM messages m JOIN sessions s ON s.id = m.session_id WHERE s.project_id = ? AND m.seq > s.extracted_upto AND m.replaced_by IS NULL', projectId)?.c ?? 0);
     },
     latestToolVersion(source: string): string | null {
       return (get('SELECT tool_version FROM sessions WHERE source = ? AND tool_version IS NOT NULL ORDER BY rowid DESC LIMIT 1', source)?.tool_version as string) ?? null;
@@ -174,8 +178,31 @@ export function openDb(path: string) {
 
     /** 按来源编号去重写入，返回新增条数。 */
     insertMessages(msgs: Message[]): number {
-      const stmt = db.prepare('INSERT OR IGNORE INTO messages (id, session_id, seq, role, text, ts, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      return tx(() => msgs.reduce((n, m) => n + Number(stmt.run(m.id, m.sessionId, m.seq, m.role, m.text, m.ts, m.capturedAt).changes), 0));
+      const stmt = db.prepare('INSERT OR IGNORE INTO messages (id, session_id, seq, role, text, ts, captured_at, parent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      return tx(() => msgs.reduce((n, m) => n + Number(stmt.run(m.id, m.sessionId, m.seq, m.role, m.text, m.ts, m.capturedAt, m.parent ?? null).changes), 0));
+    },
+    /** 标记旧版本：被哪条新版本替代。已经标过的不改。 */
+    markReplaced(ids: string[], by: string) {
+      const stmt = db.prepare('UPDATE messages SET replaced_by = ? WHERE id = ? AND replaced_by IS NULL AND id <> ?');
+      tx(() => ids.forEach((id) => stmt.run(by, id, by)));
+    },
+    /**
+     * 认出改过重发的分叉：同一段会话里，同一个上级下挂着多条用户提问时，最晚的那条是当前版本；
+     * 更早的那条，以及它到新提问之间的回复（被放弃的分支），都标为旧版本。会话文件只追加，这一段正好夹在两条提问中间。
+     * 可以重复跑。
+     */
+    detectBranches(sessionId: string) {
+      const msgs = this.messagesForSession(sessionId);
+      const groups = new Map<string, Message[]>();
+      for (const m of msgs) if (m.role === 'user' && m.parent) groups.set(m.parent, [...(groups.get(m.parent) ?? []), m]);
+      for (const g of groups.values()) {
+        if (g.length < 2) continue;
+        const sorted = [...g].sort((a, b) => a.seq - b.seq);
+        const latest = sorted[sorted.length - 1];
+        for (const old of sorted.slice(0, -1)) {
+          this.markReplaced(msgs.filter((m) => m.seq >= old.seq && m.seq < latest.seq).map((m) => m.id), latest.id);
+        }
+      }
     },
     maxSeq(sessionId: string): number {
       return Number(get('SELECT COALESCE(MAX(seq), -1) AS s FROM messages WHERE session_id = ?', sessionId)?.s ?? -1);

@@ -94,6 +94,23 @@ export function importText(db: Db, input: ImportInput): { sessionId: string; new
     };
   });
   const newMessages = db.insertMessages(msgs);
+  // 编辑过的消息：两个对上的消息之间，旧版本里没对上的和新版本里没对上的，按发言者依次配对，旧的标为被新的替代
+  const usedOld = new Set(matched.filter((x): x is number => x !== null));
+  const bounds = [-1, ...matched.map((o, j) => (o === null ? null : j)).filter((j): j is number => j !== null), turns.length];
+  for (let b = 0; b < bounds.length - 1; b++) {
+    const [j0, j1] = [bounds[b], bounds[b + 1]];
+    const o0 = j0 < 0 ? -1 : matched[j0]!;
+    const o1 = j1 >= turns.length ? existing.length : matched[j1]!;
+    const oldGap = existing.slice(o0 + 1, o1).filter((_, k) => !usedOld.has(o0 + 1 + k));
+    const newGap = msgs.slice(j0 + 1, j1);
+    const taken = new Set<number>();
+    for (const old of oldGap) {
+      const k = newGap.findIndex((m, i) => !taken.has(i) && m.role === old.role);
+      if (k < 0) continue;
+      taken.add(k);
+      db.markReplaced([old.id], newGap[k].id);
+    }
+  }
   // 顺序以最新一次导入为准
   const reseq = db.raw.prepare('UPDATE messages SET seq = ?, ts = ? WHERE id = ?');
   db.tx(() => msgs.forEach((m) => reseq.run(m.seq, m.ts, m.id)));

@@ -16,7 +16,7 @@ export function corpusBand(db: Db, projectId: string, view: ProjectView): BandCe
   for (const e of db.evidenceForProject(projectId)) {
     if (tasks.has(e.taskId)) e.cite.forEach((id) => taskOf.set(id, e.taskId));
   }
-  return db.messagesForProject(projectId).map((m) => {
+  return db.messagesForProject(projectId).filter((m) => !m.replacedBy).map((m) => { // 旧版本不算进语料带
     const t = tasks.get(taskOf.get(m.id) ?? '');
     return { at: timeOf(m), role: m.role, status: t?.status ?? null, task: t?.name ?? null };
   });

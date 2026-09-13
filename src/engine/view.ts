@@ -12,7 +12,9 @@ export function buildProjectView(db: Db, projectId: string): ProjectView & { pla
   const roles = new Map<string, Role>(messages.map((m) => [m.id, m.role]));
   const sessionOf = new Map(messages.map((m) => [m.id, m.sessionId]));
   const evidence = db.evidenceForProject(projectId);
-  const f = fold({ tasks: db.tasksForProject(projectId), evidence, corrections: db.correctionsForProject(projectId), roles, sessionOf });
+  const tsKnown = new Set(messages.filter((m) => m.ts).map((m) => m.id));
+  const sessionLabel = new Map(db.sessionsForProject(projectId).map((s) => [s.id, s.label]));
+  const f = fold({ tasks: db.tasksForProject(projectId), evidence, corrections: db.correctionsForProject(projectId), roles, sessionOf, tsKnown, sessionLabel });
 
   // 上次停在哪：最近一条消息所在的会话，取那段会话里 AI 的最后一句
   let lastPosition: LastPosition | null = null;

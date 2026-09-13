@@ -246,6 +246,7 @@ function renderTask(shortId) {
           <div class="row"><select id="st">${Object.keys(STATUS).filter((s) => s !== 'pending_confirm').map((s) => `<option value="${s}" ${s === t.status ? 'selected' : ''}>${STATUS[s]}</option>`).join('')}</select><button class="btn" data-act="status" data-task="${esc(t.id)}">改状态</button></div>
           <div class="row" style="margin-top:8px"><input type="text" id="nm" value="${esc(t.name)}"><button class="btn" data-act="rename" data-task="${esc(t.id)}">改名</button></div>
           ${others.length ? `<div class="row" style="margin-top:8px"><select id="into">${others.map((o) => `<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('')}</select><button class="btn" data-act="merge" data-task="${esc(t.id)}">合并到这个任务</button></div>` : ''}
+          ${app.projects.length > 1 ? `<div class="row" style="margin-top:8px"><select id="mv-to">${app.projects.filter((p) => p.id !== app.pid).map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select><button class="btn" data-act="move-task" data-task="${esc(t.id)}">移到这个项目</button></div>` : ''}
           <div class="s" style="margin-top:8px">你的修改会被保存，之后的自动整理不会悄悄覆盖；有冲突时会进待确认。</div>
         </div>
       </div>
@@ -289,6 +290,9 @@ function renderInbox() {
   const item = (p) => {
     if (p.kind === 'unknown_task') return `<div class="blk"><div class="blk-t">归属拿不准</div><div>${esc(p.text)} ${evLink(p.evidenceId)}</div>
       <div class="row" style="margin-top:8px">${opts ? `<select id="as-${esc(p.evidenceId)}">${opts}</select><button class="btn" data-act="assign" data-ev="${esc(p.evidenceId)}">归入</button>` : ''}<input type="text" id="nt-${esc(p.evidenceId)}" placeholder="新任务名称"><button class="btn" data-act="new-task" data-ev="${esc(p.evidenceId)}">设为新任务</button><button class="btn" data-act="ack" data-ev="${esc(p.evidenceId)}">忽略</button></div></div>`;
+    if (p.kind === 'source_conflict') return `<div class="blk"><div class="blk-t">两段对话说法相反，分不出先后</div><div>${esc(p.text)} ${evLink(p.evidenceId)}</div>
+      <div class="row" style="margin-top:8px"><button class="btn" data-act="ack" data-ev="${esc(p.evidenceId)}">保留现在的状态</button>${p.suggestedStatus ? `<button class="btn" data-act="conflict-apply" data-task="${esc(p.taskId)}" data-status="${esc(p.suggestedStatus)}" data-ev="${esc(p.evidenceId)}">按后面这段改为${STATUS[p.suggestedStatus]}</button>` : ''}</div>
+      <div class="s" style="margin-top:6px">导入网页对话时填上“大约发生在”的日期，就能避免这类冲突。</div></div>`;
     if (p.kind === 'conflict') return `<div class="blk"><div class="blk-t">新证据和你的修正冲突</div><div>${esc(p.text)} ${evLink(p.evidenceId)}</div>
       <div class="row" style="margin-top:8px"><button class="btn" data-act="ack" data-ev="${esc(p.evidenceId)}">保留我的修正</button>${p.suggestedStatus ? `<button class="btn" data-act="conflict-apply" data-task="${esc(p.taskId)}" data-status="${esc(p.suggestedStatus)}" data-ev="${esc(p.evidenceId)}">按新证据改为${STATUS[p.suggestedStatus]}</button>` : ''}</div></div>`;
     return `<div class="blk"><div class="blk-t">AI 建议，未经你确认</div><div>${esc(p.text)} ${evLink(p.evidenceId)}</div>
@@ -420,6 +424,13 @@ const on = {
     a.click();
     URL.revokeObjectURL(a.href);
     $('#ctx-state').textContent = '已导出';
+  },
+  async 'move-task'(el) {
+    const to = $('#mv-to').value;
+    if (el.dataset.armed !== '1') { el.dataset.armed = '1'; el.textContent = '确认移动'; return; }
+    const { taskId } = await api(`/api/projects/${app.pid}/tasks/${encodeURIComponent(el.dataset.task)}/move`, { method: 'POST', body: { to } });
+    toast('已移动，任务的证据和原话一起带过去了');
+    location.hash = `#/p/${to}/task/${short(taskId)}`;
   },
   async split(el) {
     const evidenceIds = [...document.querySelectorAll('.sp:checked')].map((x) => x.value);

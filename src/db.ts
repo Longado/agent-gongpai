@@ -51,9 +51,13 @@ export function openDb(path: string) {
     downgraded: (r.downgraded as string) ?? null, replaces: JSON.parse((r.replaces as string) ?? '[]'), model: r.model as string, promptVersion: r.prompt_version as string,
   });
 
+  // 可重入：只有最外层开始和提交事务，里层直接执行（SQLite 不允许事务嵌套）
+  let depth = 0;
   const tx = <T>(fn: () => T): T => {
+    if (depth > 0) return fn();
     db.exec('BEGIN');
-    try { const out = fn(); db.exec('COMMIT'); return out; } catch (e) { db.exec('ROLLBACK'); throw e; }
+    depth++;
+    try { const out = fn(); db.exec('COMMIT'); return out; } catch (e) { db.exec('ROLLBACK'); throw e; } finally { depth--; }
   };
 
   return {
@@ -190,6 +194,39 @@ export function openDb(path: string) {
       const marks = ids.map(() => '?').join(',');
       if (!projectId) return all(`SELECT * FROM messages WHERE id IN (${marks})`, ...ids).map(toMessage);
       return all(`SELECT m.* FROM messages m JOIN sessions s ON s.id = m.session_id WHERE m.id IN (${marks}) AND s.project_id = ?`, ...ids, projectId).map(toMessage);
+    },
+
+    /**
+     * 把任务移到别的项目。一段会话里可能有好几个任务，所以不整段挪：这个任务引用的消息复制一份到目标项目，
+     * 证据改指向复制品，针对这个任务的修正一起带走。复制过去的会话标为已整理，免得同步时重复整理；
+     * 它没有对应的源文件，读取器本来就不会碰它。
+     */
+    moveTask(fromProject: string, taskId: string, toProject: string): string {
+      const rec = this.tasksForProject(fromProject).find((t) => t.id === taskId);
+      if (!rec) throw new Error('任务不属于这个项目');
+      const fromName = this.getProject(fromProject)?.name ?? '另一个项目';
+      return tx(() => {
+        const newId = this.addTask({ projectId: toProject, name: rec.name, goal: rec.goal, createdAt: rec.createdAt });
+        const evs = this.evidenceForProject(fromProject).filter((e) => e.taskId === taskId);
+        const msgs = this.messagesByIds([...new Set(evs.flatMap((e) => e.cite))], fromProject);
+        const copyId = (id: string) => `${id}@${toProject}`;
+        for (const sid of new Set(msgs.map((m) => m.sessionId))) {
+          const src = this.getSession(sid)!;
+          const dst = `mv-${sid}-${toProject}`;
+          this.upsertSession({ id: dst, source: src.source, label: `${src.label}（从「${fromName}」移来）`, projectId: toProject, cwd: src.cwd, title: src.title, coverage: src.coverage, url: src.url });
+        }
+        this.insertMessages(msgs.map((m) => ({ ...m, id: copyId(m.id), sessionId: `mv-${m.sessionId}-${toProject}` })));
+        for (const sid of new Set(msgs.map((m) => m.sessionId))) this.setExtractedUpto(`mv-${sid}-${toProject}`, this.maxSeq(`mv-${sid}-${toProject}`));
+        for (const e of evs) {
+          run('UPDATE evidence SET project_id = ?, task_id = ?, cite = ? WHERE id = ?', toProject, newId, JSON.stringify(e.cite.map(copyId)), e.id);
+        }
+        for (const c of this.correctionsForProject(fromProject)) {
+          const body = c.correction as Record<string, unknown>;
+          if (body.taskId !== taskId) continue;
+          run('UPDATE corrections SET project_id = ?, body = ? WHERE id = ?', toProject, JSON.stringify({ ...body, taskId: newId }), c.id);
+        }
+        return newId;
+      });
     },
 
     addTask(t: Omit<TaskRecord, 'id'>): string {

@@ -190,7 +190,7 @@ export interface Decision {
 }
 
 export interface PendingItem {
-  kind: 'unknown_task' | 'conflict' | 'ai_suggestion';
+  kind: 'unknown_task' | 'conflict' | 'source_conflict' | 'ai_suggestion';
   evidenceId: string;
   text: string;
   taskId?: string;

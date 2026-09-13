@@ -284,6 +284,17 @@ export function serve(db: Db, port: number) {
       }
     }
 
+    if (method === 'POST' && parts[3] === 'tasks' && parts[5] === 'move') {
+      const taskId = ownTask(id, parts[4]);
+      const b = parse(z.object({ to: z.string() }), await readJson(req));
+      project(b.to); // 目标项目不存在就 404
+      if (b.to === id) throw new HttpError(400, '已经在这个项目里了');
+      if (!db.tasksForProject(id).some((t) => t.id === taskId)) throw new HttpError(400, '任务不属于这个项目');
+      const moved = db.moveTask(id, taskId, b.to);
+      db.logUsage(id, 'move_task');
+      return send(res, 200, { taskId: moved });
+    }
+
     if (method === 'POST' && parts[3] === 'sessions' && parts[5] === 'exclude') {
       const sid = parts[4];
       if (!db.sessionsForProject(id).some((s) => s.id === sid)) throw new HttpError(400, '会话不属于这个项目');

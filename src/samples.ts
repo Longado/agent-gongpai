@@ -20,9 +20,11 @@ export function loadSample(db: Db, dir: URL): { projectId: string; refs: Map<str
   const projectId = db.createProject({ name: sample.project.name, goal: sample.project.goal, dirs: [] });
   const refs = new Map<string, Message>();
   for (const s of sample.sessions) {
-    db.upsertSession({ id: s.id, source: s.source, label: s.label, projectId, cwd: null, title: null, coverage: s.coverage });
+    // 会话编号带上项目前缀：几个样本都有叫 cc-1 的会话，灌进同一个库时不能撞在一起
+    const sid = `${projectId}:${s.id}`;
+    db.upsertSession({ id: sid, source: s.source, label: s.label, projectId, cwd: null, title: null, coverage: s.coverage });
     const msgs: Message[] = s.messages.map((m, i) => ({
-      id: `${s.id}:${m.ref}`, sessionId: s.id, seq: i, role: m.role, text: m.text,
+      id: `${sid}:${m.ref}`, sessionId: sid, seq: i, role: m.role, text: m.text,
       ts: m.ts, capturedAt: m.capturedAt ?? m.ts ?? new Date().toISOString(),
     }));
     db.insertMessages(msgs);

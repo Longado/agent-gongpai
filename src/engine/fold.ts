@@ -11,7 +11,16 @@ export interface FoldInput {
   corrections: CorrectionRecord[];
   roles: Map<string, Role>; // 消息当前的发言者（可能被人工改过）
   sessionOf: Map<string, string>; // 消息属于哪个会话
+  tsKnown?: Set<string>; // 有原始时间的消息；不传就当全都有
+  sessionLabel?: Map<string, string>; // 会话的来源名，写冲突说明用
 }
+
+// 说法相反的两类证据：一边列进规划或开始做，另一边取消；一边确认完成，另一边报失败
+const OPPOSED: [EvidenceKind[], EvidenceKind[]][] = [
+  [['plan_item', 'plan_add', 'started'], ['plan_cancel']],
+  [['user_confirms_done'], ['failure']],
+];
+const opposed = (a: EvidenceKind, b: EvidenceKind) => OPPOSED.some(([x, y]) => (x.includes(a) && y.includes(b)) || (y.includes(a) && x.includes(b)));
 
 export interface FoldOutput {
   tasks: TaskView[];
@@ -52,6 +61,7 @@ interface State {
   sessions: Set<string>;
   lastAt: string;
   manualAt: number | null;
+  lastBy: StoredEvidence | null; // 最近一次改动状态的证据
   evidence: string[];
   doneCondition: string | null;
   conditionConfirmed: boolean;
@@ -83,7 +93,7 @@ export function fold(input: FoldInput): FoldOutput {
     if (redirect.has(rec.id)) continue; // 被合并掉的任务不再单独出现
     states.set(rec.id, {
       rec, name: rec.name, active: false, status: null, basis: 'text', basisNote: '', basisEvidenceId: null, history: [],
-      inPlan: false, blocker: null, sessions: new Set(), lastAt: rec.createdAt, manualAt: null, evidence: [], doneCondition: null, conditionConfirmed: false,
+      inPlan: false, blocker: null, sessions: new Set(), lastAt: rec.createdAt, manualAt: null, lastBy: null, evidence: [], doneCondition: null, conditionConfirmed: false,
     });
   }
 
@@ -248,7 +258,18 @@ export function fold(input: FoldInput): FoldOutput {
       out.pending.push({ kind: 'conflict', evidenceId: e.id, taskId: s.rec.id, suggestedStatus: target.to, text: `你把「${s.name}」改成了${STATUS_LABEL[s.status!]}；之后的记录显示：${e.detail}` });
       continue;
     }
+    // 来源冲突：两段不同来源的对话说法相反，而且都拿不到原始时间，分不出谁在后，不能按采集先后定
+    const prev = s.lastBy;
+    const unknownTime = (x: StoredEvidence) => !!input.tsKnown && !x.cite.some((id) => input.tsKnown!.has(id));
+    const sessionOfEv = (x: StoredEvidence) => input.sessionOf.get(x.cite[0]) ?? '';
+    if (prev && target.to !== s.status && opposed(prev.kind, kind as EvidenceKind) && sessionOfEv(prev) !== sessionOfEv(e) && unknownTime(prev) && unknownTime(e)) {
+      const label = (x: StoredEvidence) => input.sessionLabel?.get(sessionOfEv(x)) ?? '另一段对话';
+      out.pending.push({ kind: 'source_conflict', evidenceId: e.id, taskId: s.rec.id, suggestedStatus: target.to,
+        text: `「${s.name}」：${label(prev)}里说“${prev.detail}”，${label(e)}里说“${e.detail}”。两段都没有原始时间，分不出哪个在后，请你定` });
+      continue;
+    }
     setStatus(s, target.to, target.basis, target.note, e.id, e.at);
+    s.lastBy = e;
     if (target.to === 'blocked') s.blocker = e.detail;
     else if (s.status !== 'blocked') s.blocker = null;
   }

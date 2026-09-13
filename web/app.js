@@ -327,9 +327,9 @@ async function renderSettings() {
         <label>对话内容。用“你：”“Gemini：”这样的开头区分发言者<textarea id="im-x"></textarea></label>
         <div><button class="btn pri" data-act="import">导入</button></div></div></div>
       <div class="blk"><div class="blk-t">从 Google Takeout 导入 Gemini 历史</div><div class="stack">
-        <div class="s">在 takeout.google.com 只选“我的活动 → Gemini Apps”，格式选 JSON，解压后选 MyActivity.json。导出是活动日志，回复常有缺失，缺回复的对话会标为“部分”。</div>
+        <div class="s">直接选 Takeout 的 zip 包就行。网页版 gemini.google.com 的聊天在“我的活动 → Gemini Apps”里（格式选 JSON）；勾“Gemini”只会导出 Workspace 侧边栏的对话。缺回复的对话会标为“部分”。</div>
         <label>导入到<select id="tk-p">${projectOpts}</select></label>
-        <input type="file" id="tk-file" accept=".json,application/json">
+        <input type="file" id="tk-file" accept=".zip,.json,application/zip,application/json">
         <div><button class="btn" data-act="tk-preview">读取文件</button></div>
         <div id="tk-list"></div></div></div>
       <div class="stack" style="align-content:start">
@@ -552,12 +552,13 @@ const on = {
     const file = $('#tk-file').files?.[0];
     if (!file) return toast('先选 MyActivity.json');
     const pid = $('#tk-p').value;
-    const res = await fetch(`/api/projects/${pid}/takeout/preview`, { method: 'POST', headers: { 'x-corpus': '1', 'content-type': 'application/json' }, body: await file.text() });
+    const zip = /\.zip$/i.test(file.name);
+    const res = await fetch(`/api/projects/${pid}/takeout/preview`, { method: 'POST', headers: { 'x-corpus': '1', 'content-type': zip ? 'application/zip' : 'application/json' }, body: zip ? file : await file.text() });
     const data = await res.json();
     if (!res.ok) return toast(data.error || '读取失败');
     $('#tk-list').innerHTML = data.conversations.length ? `<div class="s">${data.conversations.length} 段对话，勾选和这个项目有关的：</div>
-      ${data.conversations.map((c) => `<label class="check" style="padding:4px 0;border-top:1px solid var(--rule)"><input type="checkbox" class="tk" value="${esc(c.key)}"><span class="s" style="min-width:86px">${esc(c.start.slice(0, 10))}</span><span>${esc(c.title)}</span><span class="s">${c.turns} 条${c.missingResponse ? ' · 缺回复' : ''}</span></label>`).join('')}
-      <div style="margin-top:8px"><button class="btn pri" data-act="tk-import" data-token="${esc(data.token)}" data-pid="${esc(pid)}">导入所选</button></div>` : '<div class="muted">文件里没有找到对话。Gemini 活动记录被关掉时，导出是空的。</div>';
+      ${data.conversations.map((c) => `<label class="check" style="padding:4px 0;border-top:1px solid var(--rule)"><input type="checkbox" class="tk" value="${esc(c.key)}"><span class="s" style="min-width:86px">${esc(c.start.slice(0, 10))}</span><span class="s">${esc(c.source)}</span><span>${esc(c.title)}</span><span class="s">${c.turns} 条${c.missingResponse ? ' · 缺回复' : ''}</span></label>`).join('')}
+      <div style="margin-top:8px"><button class="btn pri" data-act="tk-import" data-token="${esc(data.token)}" data-pid="${esc(pid)}">导入所选</button></div>` : '<div class="muted">没有找到 Gemini 对话。网页版的聊天要在 Takeout 里勾“我的活动 → Gemini Apps”；Gemini 活动记录被关掉时导出也是空的。</div>';
   },
   async 'tk-import'(el) {
     const keys = [...document.querySelectorAll('.tk:checked')].map((x) => x.value);

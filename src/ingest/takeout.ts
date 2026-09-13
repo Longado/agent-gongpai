@@ -1,6 +1,12 @@
-// Google Takeout 的 Gemini 活动导出（My Activity → Gemini Apps → MyActivity.json）。
-// 它是活动日志不是对话树：每条记录是一问一答加时间。按记录里的对话编号归回成对话，拿不到编号就按天归组。
-// 注意：字段结构按公开资料写成（details、userInteractions、Prompted 标题加 safeHtmlItem 几种），没有用真实导出验证过。
+// Google Takeout 里的 Gemini 数据，两种：
+// 1. “我的活动 → Gemini Apps”（MyActivity.json）：网页版 gemini.google.com 的活动日志，每条记录一问一答。
+//    字段结构按公开资料写成（details、userInteractions、Prompted 标题加 safeHtmlItem），没有用真实导出验证过。
+// 2. “Gemini in Workspace → Conversation History”（conversation_<编号>.txt，内容是 JSON）：Gmail、Docs 侧边栏的对话。
+//    结构照 2026-09-13 的一份真实导出写成。
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 import type { Message, Role } from '../contracts.ts';
 import type { Db } from '../db.ts';
 import { redact } from '../redact.ts';
@@ -13,6 +19,7 @@ export interface TakeoutTurn {
 
 export interface TakeoutConversation {
   key: string;
+  source: 'Gemini 网页' | 'Gemini in Workspace';
   url: string | null;
   title: string;
   start: string;
@@ -79,7 +86,7 @@ export function parseTakeout(raw: unknown): TakeoutConversation[] {
     const time = rec.time as string;
     const id = typeof rec.titleUrl === 'string' ? rec.titleUrl.match(/\/app\/(?:c\/)?([A-Za-z0-9_-]+)/)?.[1] : undefined;
     const key = id ?? `day-${dayOf(time)}`;
-    const conv = convs.get(key) ?? { key, url: id ? `https://gemini.google.com/app/${id}` : null, title: '', start: time, turns: [], missingResponse: false };
+    const conv: TakeoutConversation = convs.get(key) ?? { key, source: 'Gemini 网页', url: id ? `https://gemini.google.com/app/${id}` : null, title: '', start: time, turns: [], missingResponse: false };
     if (q) conv.turns.push({ role: 'user', text: q, ts: time });
     if (a) conv.turns.push({ role: 'assistant', text: a, ts: time });
     if (q && !a) conv.missingResponse = true;
@@ -89,19 +96,86 @@ export function parseTakeout(raw: unknown): TakeoutConversation[] {
   return [...convs.values()].map((c) => ({ ...c, title: c.title || '（没有提问的对话）' })).sort((x, y) => Date.parse(x.start) - Date.parse(y.start));
 }
 
+/** Workspace 侧边栏的一段对话：用户轮带 prompt，Gemini 轮带 text[].data，可能有引用和图片。 */
+export function parseWorkspaceConversation(raw: unknown, id: string): TakeoutConversation | null {
+  const d = raw as { conversation_turns?: Rec[]; title?: string; creation_time?: string };
+  if (!d || !Array.isArray(d.conversation_turns)) return null;
+  const turns: TakeoutTurn[] = [];
+  let unanswered = false;
+  for (const t of d.conversation_turns) {
+    const u = t.user_turn as Rec | undefined;
+    const sys = t.system_turn as Rec | undefined;
+    if (u && typeof u.prompt === 'string' && u.prompt.trim()) {
+      turns.push({ role: 'user', text: u.prompt, ts: String(u.turn_last_modified ?? d.creation_time ?? '') });
+      unanswered = true;
+    }
+    if (sys) {
+      const parts = Array.isArray(sys.text) ? (sys.text as Rec[]).map((x) => (typeof x.data === 'string' ? x.data : '')).filter(Boolean) : [];
+      const cites = Array.isArray(sys.citations) ? (sys.citations as Rec[]).map((c) => `引用：${c.display_text ?? ''} ${c.url ?? ''}`.trim()) : [];
+      const images = Array.isArray(sys.images) ? (sys.images as string[]).map((n) => `[图片] ${n}`) : [];
+      const text = [...parts, ...cites, ...images].join('\n').trim();
+      if (text) { turns.push({ role: 'assistant', text, ts: String(sys.turn_last_modified ?? d.creation_time ?? '') }); unanswered = false; }
+    }
+  }
+  if (!turns.length) return null;
+  const first = turns.find((t) => t.role === 'user')?.text ?? '';
+  const title = (d.title?.trim() || first || '（没有提问的对话）');
+  return { key: `ws-${id}`, source: 'Gemini in Workspace', url: null, title: title.length > 60 ? `${title.slice(0, 60)}…` : title, start: turns[0].ts, turns, missingResponse: unanswered };
+}
+
+function walkFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const p = join(dir, name);
+    return statSync(p).isDirectory() ? walkFiles(p) : [p];
+  });
+}
+
+/** 读 Takeout：zip 包、解压后的文件夹、MyActivity.json 或单个 Workspace 对话文件都行，自动识别。 */
+export function readTakeoutPath(path: string): TakeoutConversation[] {
+  if (path.toLowerCase().endsWith('.zip')) {
+    const tmp = mkdtempSync(join(tmpdir(), 'corpus-takeout-'));
+    try {
+      execFileSync('unzip', ['-qq', '-o', path, '-d', tmp], { stdio: ['ignore', 'ignore', 'pipe'] });
+      return readTakeoutPath(tmp);
+    } catch (e) {
+      throw new Error(`解压失败：${(e as Error).message.split('\n')[0]}`);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+  const files = statSync(path).isDirectory() ? walkFiles(path) : [path];
+  const out: TakeoutConversation[] = [];
+  for (const f of files) {
+    if (!/\.(json|txt)$/i.test(f)) continue;
+    let raw: unknown;
+    try { raw = JSON.parse(readFileSync(f, 'utf8')); } catch { continue; } // 不是 JSON 的文件跳过
+    if (Array.isArray(raw)) {
+      if (raw.some((r) => r && typeof r === 'object' && /gemini/i.test(JSON.stringify((r as Rec).products ?? (r as Rec).header ?? '')))) out.push(...parseTakeout(raw));
+    } else {
+      const ws = parseWorkspaceConversation(raw, basename(f).match(/conversation_(\w+)/)?.[1] ?? basename(f).replace(/\.\w+$/, ''));
+      if (ws) out.push(ws);
+    }
+  }
+  return out.sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+}
+
 /** 把挑选的对话导入项目。重复导入同一份文件不会重复写入。 */
-export function importTakeout(db: Db, projectId: string, raw: unknown, keys: string[] | 'all'): { sessions: number; newMessages: number } {
-  const picked = parseTakeout(raw).filter((c) => keys === 'all' || keys.includes(c.key));
+export function importConversations(db: Db, projectId: string, conversations: TakeoutConversation[], keys: string[] | 'all'): { sessions: number; newMessages: number } {
+  const picked = conversations.filter((c) => keys === 'all' || keys.includes(c.key));
   const capturedAt = new Date().toISOString();
   let newMessages = 0;
   for (const c of picked) {
     const sessionId = `tk-${c.key}`;
-    db.upsertSession({ id: sessionId, source: 'import', label: 'Gemini 网页（Takeout）', projectId, cwd: null, title: c.title, coverage: c.missingResponse ? 'partial' : 'full', url: c.url });
+    db.upsertSession({ id: sessionId, source: 'import', label: `${c.source}（Takeout）`, projectId, cwd: null, title: c.title, coverage: c.missingResponse ? 'partial' : 'full', url: c.url });
     const msgs: Message[] = c.turns.map((t, i) => ({
       id: `tk:${c.key}:${t.ts}:${t.role === 'user' ? 'u' : 'a'}`,
-      sessionId, seq: i, role: t.role, text: redact(t.text), ts: t.ts, capturedAt,
+      sessionId, seq: i, role: t.role, text: redact(t.text), ts: t.ts || null, capturedAt,
     }));
     newMessages += db.insertMessages(msgs);
   }
   return { sessions: picked.length, newMessages };
+}
+
+export function importTakeout(db: Db, projectId: string, raw: unknown, keys: string[] | 'all') {
+  return importConversations(db, projectId, parseTakeout(raw), keys);
 }

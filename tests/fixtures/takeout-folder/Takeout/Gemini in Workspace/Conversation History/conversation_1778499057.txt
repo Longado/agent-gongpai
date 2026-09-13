@@ -1,0 +1,52 @@
+{
+ "conversation_turns": [
+  {
+   "user_turn": {
+    "prompt": "帮我把记账小程序的导出需求整理一下",
+    "turn_index": 1,
+    "turn_last_modified": "2026-05-11T11:30:57.834207+00:00"
+   }
+  },
+  {
+   "system_turn": {
+    "text": [
+     {
+      "data": "导出需求：按月导出表格文件，包含日期、分类、金额。"
+     }
+    ],
+    "citations": [
+     {
+      "display_text": "示例文档",
+      "url": "https://example.com/spec"
+     }
+    ],
+    "turn_index": 1,
+    "turn_last_modified": "2026-05-11T11:31:20.000000+00:00"
+   }
+  },
+  {
+   "user_turn": {
+    "prompt": "再加一个按分类汇总",
+    "turn_index": 2,
+    "turn_last_modified": "2026-05-11T11:35:00.000000+00:00"
+   }
+  },
+  {
+   "system_turn": {
+    "text": [
+     {
+      "data": "好的，加一张按分类汇总的表。"
+     }
+    ],
+    "images": [
+     "conversation_1778499057_turn_2_images_0"
+    ],
+    "turn_index": 2,
+    "turn_last_modified": "2026-05-11T11:35:30.000000+00:00"
+   }
+  }
+ ],
+ "creation_time": "2026-05-11T11:30:57.834207+00:00",
+ "last_modification_time": "2026-05-11T11:35:30.000000+00:00",
+ "title": "记账小程序导出需求"
+}

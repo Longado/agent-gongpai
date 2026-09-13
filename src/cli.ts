@@ -9,7 +9,7 @@ import { openDb } from './db.ts';
 import { syncClaudeCode } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
 import { importText } from './ingest/paste.ts';
-import { parseTakeout, importTakeout } from './ingest/takeout.ts';
+import { readTakeoutPath, importConversations } from './ingest/takeout.ts';
 import { extractProject } from './extract/run.ts';
 import { deepseek } from './extract/model.ts';
 import { buildProjectView } from './engine/view.ts';
@@ -24,7 +24,7 @@ const HELP = `用法：npm run corpus -- <命令>
   project pause|resume --project <编号>              暂停或恢复采集（已有数据保留）
   sync [--no-extract] [--quiet]                    读取 Claude Code 和 Codex 的新对话，并整理；--quiet 不输出（给钩子用）
   import <文件> --project <编号> --label <来源> --title <标题> [--partial] [--date YYYY-MM-DD]
-  takeout <MyActivity.json> --project <编号> [--pick 编号,编号 | --all]
+  takeout <zip、文件夹或 json> --project <编号> [--pick 编号,编号 | --all]
                                                    Google Takeout 的 Gemini 历史：不带 --pick 先列出对话
   extract [--project <编号>] [--fresh]              只整理，不读取；--fresh 清掉旧证据从头整理（任务编号和修正保留）
   show --project <编号>                             打印项目现场
@@ -91,13 +91,14 @@ async function main() {
     const r = importText(d, { projectId: need(values.project, 'project'), text: readFileSync(need(sub, '文件'), 'utf8'), label: need(values.label, 'label'), title: need(values.title, 'title'), coverage: values.partial ? 'partial' : 'full', date: values.date });
     console.log(`导入 ${r.newMessages} 条新消息${r.unsure ? '；有一段认不出发言者，请在页面上核对' : ''}`);
   } else if (cmd === 'takeout') {
-    const raw = JSON.parse(readFileSync(need(sub, '文件'), 'utf8'));
+    const convs = readTakeoutPath(need(sub, '文件'));
     const pid = need(values.project, 'project');
     if (!values.pick && !values.all) {
-      for (const c of parseTakeout(raw)) console.log(`${c.key.padEnd(20)} ${c.start.slice(0, 10)} ${String(c.turns.length).padStart(3)} 条${c.missingResponse ? '（缺回复）' : ''}  ${c.title}`);
-      console.log('\n用 --pick 编号,编号 导入挑选的对话，或 --all 全部导入');
+      if (!convs.length) console.log('没有找到 Gemini 对话。网页版的聊天要在 Takeout 里勾“我的活动 → Gemini Apps”，格式选 JSON');
+      for (const c of convs) console.log(`${c.key.padEnd(20)} ${c.start.slice(0, 10)} ${String(c.turns.length).padStart(3)} 条${c.missingResponse ? '（缺回复）' : ''}  ${c.source}  ${c.title}`);
+      if (convs.length) console.log('\n用 --pick 编号,编号 导入挑选的对话，或 --all 全部导入');
     } else {
-      const r = importTakeout(db(), pid, raw, values.all ? 'all' : values.pick!.split(',').map((x) => x.trim()));
+      const r = importConversations(db(), pid, convs, values.all ? 'all' : values.pick!.split(',').map((x) => x.trim()));
       console.log(`导入 ${r.sessions} 段对话，新消息 ${r.newMessages} 条。点“同步”整理`);
     }
   } else if (cmd === 'extract') {

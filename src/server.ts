@@ -13,7 +13,9 @@ import { resultHints } from './engine/hints.ts';
 import { syncClaudeCode, type SyncResult } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
 import { importText } from './ingest/paste.ts';
-import { parseTakeout, importTakeout } from './ingest/takeout.ts';
+import { parseTakeout, readTakeoutPath, importConversations, type TakeoutConversation } from './ingest/takeout.ts';
+import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { extractProject } from './extract/run.ts';
 import { deepseek } from './extract/model.ts';
@@ -50,7 +52,7 @@ function send(res: http.ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
-async function readJson(req: http.IncomingMessage, limit = 5_000_000): Promise<unknown> {
+async function readBody(req: http.IncomingMessage, limit: number): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const c of req) {
@@ -58,7 +60,12 @@ async function readJson(req: http.IncomingMessage, limit = 5_000_000): Promise<u
     if (size > limit) throw new HttpError(413, '内容太大');
     chunks.push(c as Buffer);
   }
-  try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { throw new HttpError(400, '请求内容不是合法的 JSON'); }
+  return Buffer.concat(chunks);
+}
+
+async function readJson(req: http.IncomingMessage, limit = 5_000_000): Promise<unknown> {
+  const text = (await readBody(req, limit)).toString('utf8');
+  try { return JSON.parse(text || '{}'); } catch { throw new HttpError(400, '请求内容不是合法的 JSON'); }
 }
 
 function parse<T>(schema: z.ZodType<T>, data: unknown): T {
@@ -70,7 +77,7 @@ function parse<T>(schema: z.ZodType<T>, data: unknown): T {
 export function serve(db: Db, port: number) {
   let lastSync: { at: string; cc: SyncResult; cx: SyncResult } | null = null;
   // Takeout 预览后暂存解析前的原文，导入时不用再传一遍；只留最近一份
-  let takeout: { token: string; projectId: string; raw: unknown } | null = null;
+  let takeout: { token: string; projectId: string; conversations: TakeoutConversation[] } | null = null;
   let syncing = false;
   const model = deepseek();
 
@@ -197,17 +204,33 @@ export function serve(db: Db, port: number) {
     }
 
     if (method === 'POST' && parts[3] === 'takeout' && parts[4] === 'preview') {
-      const raw = await readJson(req, 50_000_000); // 完整的导出文件可能很大
-      let conversations;
-      try { conversations = parseTakeout(raw); } catch (e) { throw new HttpError(400, (e as Error).message); }
-      takeout = { token: randomUUID(), projectId: id, raw };
-      return send(res, 200, { token: takeout.token, conversations: conversations.map((c) => ({ key: c.key, title: c.title, start: c.start, turns: c.turns.length, missingResponse: c.missingResponse, url: c.url })) });
+      // 可以直接传 Takeout 的 zip 包，也可以传 MyActivity.json
+      let conversations: TakeoutConversation[];
+      try {
+        if (/zip|octet-stream/.test(req.headers['content-type'] ?? '')) {
+          const buf = await readBody(req, 50_000_000);
+          const dir = mkdtempSync(join(tmpdir(), 'corpus-upload-'));
+          try {
+            writeFileSync(join(dir, 'takeout.zip'), buf);
+            conversations = readTakeoutPath(join(dir, 'takeout.zip'));
+          } finally {
+            rmSync(dir, { recursive: true, force: true });
+          }
+        } else {
+          conversations = parseTakeout(await readJson(req, 50_000_000));
+        }
+      } catch (e) {
+        if (e instanceof HttpError) throw e;
+        throw new HttpError(400, (e as Error).message);
+      }
+      takeout = { token: randomUUID(), projectId: id, conversations };
+      return send(res, 200, { token: takeout.token, conversations: conversations.map((c) => ({ key: c.key, source: c.source, title: c.title, start: c.start, turns: c.turns.length, missingResponse: c.missingResponse, url: c.url })) });
     }
 
     if (method === 'POST' && parts[3] === 'takeout' && parts[4] === 'import') {
       const b = parse(z.object({ token: z.string(), keys: z.array(z.string()).min(1).max(500) }), await readJson(req));
       if (!takeout || takeout.token !== b.token || takeout.projectId !== id) throw new HttpError(409, '预览已过期，请重新选择文件');
-      const r = importTakeout(db, id, takeout.raw, b.keys);
+      const r = importConversations(db, id, takeout.conversations, b.keys);
       db.logUsage(id, 'takeout_import');
       return send(res, 200, r);
     }

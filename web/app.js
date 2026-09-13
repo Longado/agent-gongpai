@@ -138,7 +138,7 @@ function renderOverview() {
         <div class="row">${t.status === 'to_verify' ? `<button class="btn" data-act="confirm-done" data-task="${esc(t.id)}">确认完成</button>` : `<button class="btn" data-act="unblock" data-task="${esc(t.id)}">已解决</button>`}<button class="btn" data-act="cont" data-task="${esc(t.id)}">继续</button></div></div>`).join('') : '<div class="muted">没有待验证或受阻的任务</div>'}
     </div>
     <div class="blk"><div class="blk-t">下一步 <span class="r s">最多 3 条</span></div>
-      ${next.length ? next.map((n, i) => `<div class="next"><span class="no">${i + 1}</span><div><b>${esc(n.action)}</b><div class="s">完成标准：${esc(n.doneStandard)} · 原因：${esc(n.reason)} ${evLink(n.evidenceId)}</div></div>
+      ${next.length ? next.map((n, i) => `<div class="next"><span class="no">${i + 1}</span><div><b>${esc(n.action)}</b><div class="s">${n.precondition && n.precondition !== '无' ? `前置条件：${esc(n.precondition)} · ` : ''}完成标准：${esc(n.doneStandard)} · 原因：${esc(n.reason)} ${evLink(n.evidenceId)}</div></div>
         <div class="row"><button class="btn" data-act="next-accept" data-task="${esc(n.taskId)}">采纳</button><button class="btn" data-act="next-later" data-key="${esc(n.key)}">暂缓</button><button class="btn" data-act="next-dismiss" data-key="${esc(n.key)}">驳回</button></div></div>`).join('') : '<div class="muted">暂时没有可推荐的下一步</div>'}
       ${view.ideas.length ? `<div class="s" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule)">范围外想法 ${view.ideas.length} 条，不会自动变成待办：${view.ideas.slice(-3).map((x) => esc(x.text)).join('；')}</div>` : ''}
     </div>

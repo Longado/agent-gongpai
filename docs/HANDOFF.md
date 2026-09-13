@@ -10,6 +10,7 @@
 - 第 11 轮完成：重新整理（保留修正和任务编号）、移出误归类会话、工具版本。
 - 第 12 轮完成：前端改成 ThreeUI 风格的深色控制台界面，新增语料带；像素 logo 在 `web/logo.svg`。
 - 第 13 轮完成：拆分任务、结果线索（`src/engine/hints.ts`）、续接上下文导出 Markdown。
+- 第 22 轮完成：下一步的前置条件（`src/engine/next.ts`）。失败引起的状态说明统一以“失败”开头。
 - 第 21 轮完成：Gemini 扩展自动同步（`extension/background.js`、`lib.js`）；有链接的导入按链接认会话。需求文档 v0.2 的 P0、P1 全部完成。
 - 第 20 轮完成：任务可以移到别的项目；来源冲突进待确认（规则见 `docs/contracts.md`）；数据库事务改成可重入；示例数据的会话编号加了项目前缀。
 - 第 19 轮完成：Gemini 浏览器扩展（`extension/`，见 `docs/EXTENSION.md`）。需求文档 v0.2 的全部 P0 到此补齐。
@@ -19,7 +20,7 @@
 - 第 15 轮完成：Claude Code 插件（`.claude-plugin/`、`plugin/`、`bin/corpus`），见 `docs/PLUGIN.md`。
 - 第 14 轮完成：导入原页面链接、决定“已被替代”（提示词 `evidence-v4`，新增样本 S7）、打开页面自动只读同步。
 - 数据和配置默认在 `~/.working-corpus/`（`CORPUS_HOME`、`CORPUS_DB` 可改）；密钥读取顺序：环境变量 > 仓库 `.env` > `~/.working-corpus/.env`。
-- 测试 110 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
+- 测试 113 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
 
 ## 下一步
 

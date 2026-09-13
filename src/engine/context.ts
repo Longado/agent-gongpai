@@ -45,6 +45,7 @@ export function buildContext(db: Db, projectId: string, taskId: string): string 
     `线索：${list(sessions)}`,
     `其他任务：已完成 ${list(others('done'))}；待验证 ${list(others('to_verify'))}`,
     `不要做（已取消）：${list(cancelled.map((t) => t.name))}`,
+    `前置条件：${step?.precondition ?? '无'}`,
     `本轮请做：${thisRound}；完成标准：${task.doneCondition ?? (task.status === 'to_verify' ? '告诉我验证方法和结果，发现问题就直接说' : '做完后告诉我怎么验证')}`,
   ].join('\n');
 }

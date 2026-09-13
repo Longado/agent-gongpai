@@ -3,6 +3,7 @@ import type { LastPosition, ProjectView, Role, TaskStatus } from '../contracts.t
 import type { Db } from '../db.ts';
 import { fold } from './fold.ts';
 import { nextSteps } from './next.ts';
+import { resultHints } from './hints.ts';
 import { ms, timeOf } from '../extract/validate.ts';
 
 const EMPTY: Record<TaskStatus, number> = { pending_confirm: 0, todo: 0, doing: 0, to_verify: 0, done: 0, blocked: 0, cancelled: 0 };
@@ -28,11 +29,16 @@ export function buildProjectView(db: Db, projectId: string): ProjectView & { pla
     lastPosition = { at: timeOf(latest), sessionId: session.id, label: session.label, title: session.title, text: lastAi.text.slice(0, 200), taskId };
   }
 
+  // 每个任务的产出线索，给下一步的前置条件用
+  const textOf = new Map(messages.map((m) => [m.id, m.text]));
+  const citeOf = new Map(evidence.map((e) => [e.id, e.cite]));
+  const hints = new Map(f.tasks.map((t) => [t.id, resultHints(t.evidenceIds.flatMap((id) => citeOf.get(id) ?? []).map((m) => textOf.get(m) ?? ''))]));
+
   const counts = { ...EMPTY };
   f.tasks.forEach((t) => counts[t.status]++);
   return {
     tasks: f.tasks, plan: f.plan, decisions: f.decisions, ideas: f.ideas, pending: f.pending,
-    next: nextSteps(f.tasks, f.planOrder, f.dismissed, lastPosition?.taskId ?? null),
+    next: nextSteps(f.tasks, f.planOrder, f.dismissed, lastPosition?.taskId ?? null, hints),
     counts, doneEvents: f.doneEvents,
     coverageWarning: db.sessionsForProject(projectId).some((s) => s.coverage === 'partial'),
     lastPosition, planOrder: f.planOrder,

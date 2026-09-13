@@ -67,7 +67,7 @@ function projectStatus(db: Db, projectId: string): string {
     ...(active.length ? active.map((t) => `- ${taskLine(t)}`) : ['- 还没有任务']),
     ...(cancelled.length ? ['不要做（已取消）：', ...cancelled.map((t) => `- ${shortId(t.id)} ${t.name} — ${t.basisNote}`)] : []),
     '下一步：',
-    ...(view.next.length ? view.next.map((n, i) => `${i + 1}. ${n.action}（${n.reason}）`) : ['- 暂无建议']),
+    ...(view.next.length ? view.next.map((n, i) => `${i + 1}. ${n.action}（${n.reason}）${n.precondition !== '无' ? ` 前置条件：${n.precondition}` : ''}`) : ['- 暂无建议']),
     `待确认：${view.pending.length} 条${view.pending.length ? '，请到 Working Corpus 页面上处理' : ''}`,
     '提醒：AI 自述完成只算待验证，用户确认了才算完成。要接着做某个任务，调用 continue_context 并传任务编号。',
   ].join('\n');

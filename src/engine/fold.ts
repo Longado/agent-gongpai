@@ -242,7 +242,7 @@ export function fold(input: FoldInput): FoldOutput {
         if (s.status !== 'cancelled') target = { to: 'done', basis: 'user', note: `你 ${day(e.at)} 确认：${e.detail}` };
         break;
       case 'failure':
-        if (s.status !== 'cancelled' && s.status !== 'blocked') target = { to: 'doing', basis: 'text', note: `${s.status === 'done' || s.status === 'to_verify' ? '重开' : '失败'}：${e.detail}` };
+        if (s.status !== 'cancelled' && s.status !== 'blocked') target = { to: 'doing', basis: 'text', note: `失败${s.status === 'done' || s.status === 'to_verify' ? '，重开' : ''}：${e.detail}` };
         break;
       case 'blocked': // 完成后又受阻也算重开（需求 F07：出现后续问题时重新打开）
         if (s.status !== 'cancelled') target = { to: 'blocked', basis: byWhom, note: e.speaker === 'assistant' ? `AI 推测：${e.detail}` : e.detail };

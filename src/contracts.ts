@@ -203,6 +203,7 @@ export interface NextStep {
   action: string;
   reason: string;
   doneStandard: string;
+  precondition: string; // 动手之前要先满足什么；没有就是“无”
   evidenceId: string | null;
 }
 

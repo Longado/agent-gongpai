@@ -18,15 +18,16 @@ type Page = { send: (method: string, params?: object) => Promise<any> };
 type Shot = { caption: string; act?: (p: Actions) => Promise<void>; hold: number };
 
 // ---------- 分镜：改演示内容只改这里 ----------
+// hold 是动作之后停留的毫秒数：字幕加画面，按每秒读 6 到 7 个字留足时间
 const SHOTS: Shot[] = [
-  { caption: '记账小程序：六段对话来自 Gemini 网页、Codex 和 Claude Code，整理成一页项目现场', hold: 4000 },
-  { caption: 'AI 说“月度导出”做完了。点“依据”，看到的是 AI 的原话，所以只算待验证', act: (a) => a.click('.line [data-act="ev"]', '月度导出', '.line'), hold: 4500 },
-  { caption: '点“继续”，拿到交给下一个 AI 的背景：之前失败过、先确认完成条件、云同步不要做', act: async (a) => { await a.click('[data-act="close-drawer"]'); await a.click('.line [data-act="cont"]', '月度导出', '.line'); }, hold: 6000 },
-  { caption: '规划改过两版：第 2 版加了本地备份，取消了云同步', act: async (a) => { await a.click('[data-act="close-modal"]'); await a.click('nav.tabs a', '规划'); }, hold: 4500 },
-  { caption: 'AI 自己提的“预算提醒”先放在待确认，你点头才算任务', act: (a) => a.click('nav.tabs a', '待确认'), hold: 4000 },
-  { caption: '你验证过“记账录入”，点“确认完成”，它才算已完成', act: async (a) => { await a.click('nav.tabs a', '概览'); await a.click('.line [data-act="confirm-done"]', '记账录入', '.line'); }, hold: 4000 },
-  { caption: '下一步最多三条：先验证，再继续，最后才开始新任务', act: (a) => a.scrollTo('.next'), hold: 4500 },
-  { caption: 'Working Corpus · 数据都在本机，每条结论都能点回原话', act: (a) => a.scrollTo('.head'), hold: 3000 },
+  { caption: '记账小程序：六段对话来自 Gemini 网页、Codex 和 Claude Code，整理成一页项目现场', hold: 5500 },
+  { caption: 'AI 说“月度导出”做完了。点“依据”，看到的是 AI 的原话，所以只算待验证', act: (a) => a.click('.line [data-act="ev"]', '月度导出', '.line'), hold: 7000 },
+  { caption: '点“继续”，拿到交给下一个 AI 的背景：之前失败过、先确认完成条件、云同步不要做', act: async (a) => { await a.click('[data-act="close-drawer"]'); await a.click('.line [data-act="cont"]', '月度导出', '.line'); }, hold: 8000 },
+  { caption: '规划改过两版：第 2 版加了本地备份，取消了云同步', act: async (a) => { await a.click('[data-act="close-modal"]'); await a.click('nav.tabs a', '规划'); }, hold: 6500 },
+  { caption: 'AI 自己提的“预算提醒”先放在待确认，你点头才算任务', act: (a) => a.click('nav.tabs a', '待确认'), hold: 6000 },
+  { caption: '你验证过“记账录入”，点“确认完成”，它才算已完成', act: async (a) => { await a.click('nav.tabs a', '概览'); await a.click('.line [data-act="confirm-done"]', '记账录入', '.line'); }, hold: 6000 },
+  { caption: '下一步最多三条：先验证，再继续，最后才开始新任务', act: (a) => a.scrollTo('.next'), hold: 6500 },
+  { caption: 'Working Corpus · 数据都在本机，每条结论都能点回原话', act: (a) => a.scrollTo('.head'), hold: 4000 },
 ];
 
 // ---------- 画面上的光标和字幕 ----------
@@ -158,7 +159,7 @@ try {
   mkdirSync(OUT, { recursive: true });
   const ff = (args: string[]) => { const r = spawnSync('ffmpeg', ['-v', 'error', '-y', ...args], { encoding: 'utf8' }); if (r.status !== 0) throw new Error(r.stderr || '没找到 ffmpeg'); };
   ff(['-f', 'concat', '-safe', '0', '-i', join(dir, 'list.txt'), '-vf', 'fps=25,format=yuv420p', '-c:v', 'libx264', '-crf', '24', '-movflags', '+faststart', join(OUT, 'window.mp4')]);
-  ff(['-i', join(OUT, 'window.mp4'), '-vf', 'fps=10,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle', join(OUT, 'window.gif')]);
+  ff(['-i', join(OUT, 'window.mp4'), '-vf', 'fps=10,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle', join(OUT, 'window.gif')]);
   console.log(`已生成 docs/media/window.mp4 和 window.gif：${frames.length} 帧，${((frames.at(-1)!.t - frames[0].t) / 1000).toFixed(1)} 秒`);
 } finally {
   for (const p of procs) p.kill();

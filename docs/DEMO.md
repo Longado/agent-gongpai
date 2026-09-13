@@ -30,11 +30,11 @@ README 里的两段录屏都由脚本自动录制，只用示例项目“记账�
 
 | 命令 | 生成 | 需要 |
 |---|---|---|
-| `npm run record:terminal` | `terminal.gif`、`terminal.mp4`，约 22 秒 | [VHS](https://github.com/charmbracelet/vhs)（`brew install vhs`） |
-| `npm run record:window` | `window.gif`、`window.mp4`，约 48 秒 | Chrome、ffmpeg |
+| `npm run record:terminal` | `terminal.gif`、`terminal.mp4`，约 37 秒 | [VHS](https://github.com/charmbracelet/vhs)（`brew install vhs`） |
+| `npm run record:window` | `window.gif`、`window.mp4`，约 63 秒 | Chrome、ffmpeg |
 | `npm run record` | 两段都录 | 同上 |
 
-改演示内容只改分镜：终端在 `demo/terminal.tape`，窗口在 `demo/window.ts` 开头的 `SHOTS`。
+改演示内容只改分镜：终端在 `demo/terminal.tape`，窗口在 `demo/window.ts` 开头的 `SHOTS`。VHS 的帧率别调高：它逐帧截图，截不过来时成片会被压快，字还没看清就切走了。架构图的源文件是 `docs/diagram/architecture.html`，改完 `npm run diagram`。
 
 ### 终端分镜
 

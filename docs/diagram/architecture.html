@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Working Corpus 架构</title>
+<!-- 架构图源文件。改完运行 npm run diagram，生成 docs/media/architecture.png -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@600;700&display=swap">
+<style>
+  :root{
+    --ground:#0B0C0F; --surface:#121419; --surface-2:#191C22; --rule:#262A33; --rule-2:#343945;
+    --ink:#ECEEF2; --ink-2:#A6ACB8; --ink-3:#6E7584; --accent:#8C90F6; --accent-soft:#1B1D33;
+    --todo:#8D95A8; --doing:#6AA6F2; --verify:#F0B23F; --done:#46C98B; --block:#F0766C; --idle:#2A2E38;
+    --sans:"PingFang SC","Hiragino Sans GB","Noto Sans SC",sans-serif;
+    --mono:"JetBrains Mono","SF Mono",Menlo,monospace;
+    --pixel:"Pixelify Sans","JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+  .frame{width:1600px;height:720px;padding:44px 52px 36px;display:flex;flex-direction:column;gap:26px;
+    background:radial-gradient(1200px 500px at 58% 42%,rgba(140,144,246,.07),transparent 70%),var(--ground)}
+  header{display:flex;align-items:center;gap:18px}
+  header img{width:44px;height:44px;image-rendering:pixelated}
+  .brand{font:700 30px/1 var(--pixel);letter-spacing:.5px}
+  .tag{margin-left:auto;font:500 15px/1 var(--mono);color:var(--ink-2);border:1px solid var(--rule-2);border-radius:6px;padding:9px 14px}
+  .tag b{color:var(--accent);font-weight:700}
+  .flow{flex:1;display:grid;grid-template-columns:220px 28px 250px 28px 330px 28px 330px 28px 1fr;align-items:stretch}
+  .col{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .eyebrow{font:500 12px/1 var(--mono);color:var(--ink-3);letter-spacing:1.6px;text-transform:uppercase}
+  .h{font:600 19px/1.3 var(--sans)}
+  .card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
+  .src{display:flex;flex-direction:column;gap:3px}
+  .src b{font:600 15.5px/1.3 var(--sans)}
+  .src span{font:400 12.5px/1.4 var(--mono);color:var(--ink-3)}
+  .steps{display:flex;flex-direction:column;gap:9px;font-size:14.5px;color:var(--ink-2)}
+  .steps div::before{content:"";display:inline-block;width:6px;height:6px;background:var(--ink-3);margin:0 10px 2px 0}
+  .store{margin-top:auto;border-style:dashed}
+  .store .t{font:500 13px/1 var(--mono);color:var(--ink-2);margin-bottom:10px}
+  .px{display:grid;grid-template-columns:repeat(18,9px);gap:3px}
+  .px i{width:9px;height:9px;background:var(--idle)}
+  /* 大模型那一步：全图唯一的强调色 */
+  .llm{border:1.5px solid var(--accent);background:linear-gradient(180deg,var(--accent-soft),var(--surface) 60%);box-shadow:0 0 0 6px rgba(140,144,246,.07),0 18px 50px rgba(0,0,0,.35);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;flex:1}
+  .llm .badge{align-self:flex-start;font:700 12px/1 var(--mono);color:var(--ground);background:var(--accent);padding:6px 9px;border-radius:5px;letter-spacing:.5px}
+  .msg{font:400 14px/1.5 var(--sans);color:var(--ink-2);border-left:2px solid var(--rule-2);padding-left:10px}
+  .msg em{font:500 12px/1 var(--mono);color:var(--ink-3);font-style:normal;margin-right:6px}
+  pre{margin:0;font:400 13px/1.6 var(--mono);color:var(--ink);background:var(--ground);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;white-space:pre}
+  pre .k{color:var(--accent)} pre .s{color:#C9D08B}
+  .checks{display:flex;flex-direction:column;gap:7px;font-size:14px;color:var(--ink-2)}
+  .checks div{display:flex;gap:9px;align-items:baseline}
+  .checks div::before{content:"✓";font:700 13px/1 var(--mono);color:var(--done)}
+  .sub{font:500 12.5px/1.2 var(--mono);color:var(--ink-3)}
+  .fold{flex:1;display:flex;flex-direction:column;gap:14px}
+  .states{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font:500 13px/1 var(--sans)}
+  .chip{border:1px solid currentColor;border-radius:5px;padding:5px 8px;background:rgba(255,255,255,.02)}
+  .arr{color:var(--ink-3);font:400 13px/1 var(--mono)}
+  .rules{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--rule)}
+  .rule{display:grid;grid-template-columns:128px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule);font-size:14px}
+  .rule span:first-child{color:var(--ink-2)}
+  .rule span:last-child{color:var(--ink)}
+  .rule.key span:last-child{color:var(--verify);font-weight:600}
+  .outs{display:flex;flex-direction:column;gap:10px}
+  .out{display:flex;flex-direction:column;gap:4px}
+  .out b{font:600 15px/1.3 var(--sans)}
+  .out code{font:400 12.5px/1.4 var(--mono);color:var(--ink-3)}
+  /* 列之间：像素方块代表消息，经过整理后带上任务状态的颜色 */
+  .pipe{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px}
+  .pipe i{width:8px;height:8px;background:var(--idle)}
+  .pipe i.on{background:var(--ink-3)}
+  .pipe.lit i:nth-child(5n+1){background:var(--done)} .pipe.lit i:nth-child(5n+2){background:var(--doing)}
+  .pipe.lit i:nth-child(5n+3){background:var(--verify)} .pipe.lit i:nth-child(5n+4){background:var(--todo)} .pipe.lit i:nth-child(5n){background:var(--block)}
+  .pipe b{font:400 16px/1 var(--mono);color:var(--ink-3);margin:4px 0}
+  footer{display:flex;gap:28px;align-items:center;border-top:1px solid var(--rule);padding-top:18px;font-size:14px;color:var(--ink-2)}
+  footer b{color:var(--ink);font-weight:600}
+  footer .dot{width:8px;height:8px;background:var(--done);display:inline-block;margin-right:8px}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <img src="../../web/logo.svg" alt="">
+    <div class="brand">Working Corpus</div>
+    <div style="color:var(--ink-2);font-size:17px">把散在各个 AI 工具里的对话，整理成一页有证据的项目现场</div>
+    <div class="tag">大模型只做 <b>一次</b> 判断，其余都是代码</div>
+  </header>
+
+  <div class="flow">
+    <section class="col">
+      <div class="eyebrow">01 · 来源</div>
+      <div class="h">你用过的 AI 工具</div>
+      <div class="card src"><b>Claude Code</b><span>~/.claude/projects</span></div>
+      <div class="card src"><b>Codex</b><span>~/.codex/sessions</span></div>
+      <div class="card src"><b>VS Code 聊天</b><span>chatSessions 记录</span></div>
+      <div class="card src"><b>网页 AI</b><span>粘贴 · Takeout · 扩展</span></div>
+    </section>
+
+    <div class="pipe"><i class="on"></i><i class="on"></i><i class="on"></i><b>›</b><i class="on"></i><i class="on"></i><i class="on"></i></div>
+
+    <section class="col">
+      <div class="eyebrow">02 · 读取与归属</div>
+      <div class="h">只读，不改原文件</div>
+      <div class="card steps">
+        <div>滤掉工具注入的说明和噪音</div>
+        <div>认出改过重发的提问</div>
+        <div>凭证读取时就替换掉</div>
+        <div>按代码目录归到项目</div>
+      </div>
+      <div class="card store">
+        <div class="t">消息表 · 本机 SQLite</div>
+        <div class="px" id="raw"></div>
+      </div>
+    </section>
+
+    <div class="pipe"><i class="on"></i><i class="on"></i><i class="on"></i><b>›</b><i class="on"></i><i class="on"></i><i class="on"></i></div>
+
+    <section class="col">
+      <div class="eyebrow">03 · 整理</div>
+      <div class="h">把消息标成证据</div>
+      <div class="llm">
+        <span class="badge">大模型 · 全程只调用这一步</span>
+        <div class="msg"><em>m12 · Codex</em>AI：是编码问题，已经改成 UTF-8 带 BOM，修好了。</div>
+        <pre>{ <span class="k">task</span>: <span class="s">"月度导出"</span>,
+  <span class="k">kind</span>: <span class="s">"ai_claims_done"</span>,
+  <span class="k">cite</span>: [<span class="s">"m12"</span>] }</pre>
+        <div class="sub">代码再验一遍，不合格的丢掉或降级</div>
+        <div class="checks">
+          <div>引用的消息真的存在</div>
+          <div>谁说的按原文记，不听模型的</div>
+          <div>没有你的原话，不算你确认</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="pipe lit"><i></i><i></i><i></i><i></i><i></i><b>›</b><i></i><i></i><i></i><i></i><i></i></div>
+
+    <section class="col">
+      <div class="eyebrow">04 · 折叠</div>
+      <div class="h">代码按规则算出现场</div>
+      <div class="card fold">
+        <div class="states">
+          <span class="chip" style="color:var(--todo)">待开始</span><span class="arr">→</span>
+          <span class="chip" style="color:var(--doing)">进行中</span><span class="arr">→</span>
+          <span class="chip" style="color:var(--verify)">待验证</span><span class="arr">→</span>
+          <span class="chip" style="color:var(--done)">已完成</span>
+        </div>
+        <div class="rules">
+          <div class="rule key"><span>AI 说做完了</span><span>最多到待验证</span></div>
+          <div class="rule"><span>你说试过没问题</span><span>已完成</span></div>
+          <div class="rule"><span>报告失败</span><span>打回进行中，写明原因</span></div>
+          <div class="rule"><span>规划改了</span><span>新的一版，旧版可对比</span></div>
+          <div class="rule"><span>新决定推翻旧的</span><span>旧决定标为已替代</span></div>
+          <div class="rule"><span>AI 自己提的建议</span><span>先进待确认</span></div>
+          <div class="rule"><span>你手动改过</span><span>你的修正优先</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="pipe lit"><i></i><i></i><i></i><i></i><i></i><b>›</b><i></i><i></i><i></i><i></i><i></i></div>
+
+    <section class="col">
+      <div class="eyebrow">05 · 用起来</div>
+      <div class="h">给人看，也交给下一个 AI</div>
+      <div class="outs">
+        <div class="card out"><b>终端</b><code>corpus · corpus show</code></div>
+        <div class="card out"><b>桌面窗口</b><code>corpus app · 点依据看原话</code></div>
+        <div class="card out"><b>续接上下文</b><code>corpus context · 粘进新会话</code></div>
+        <div class="card out"><b>连接器</b><code>MCP · Claude Code 插件</code></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <span><span class="dot"></span><b>数据都在本机</b></span>
+    <span>整理时只发绑定项目的对话，发送前先征得你同意</span>
+    <span>每个状态都写明依据：你确认的、原文写明的，还是 AI 自述</span>
+    <span style="margin-left:auto;font-family:var(--mono);color:var(--ink-3)">github.com/Longado/working-corpus</span>
+  </footer>
+</div>
+<script>
+  // 消息表里的方块：大部分是普通消息，少数已经变成证据
+  const raw = document.getElementById('raw');
+  const lit = new Set([2, 5, 9, 14, 20, 23, 27, 31, 38, 41, 44, 50]);
+  raw.innerHTML = Array.from({ length: 54 }, (_, i) => `<i style="${lit.has(i) ? 'background:var(--ink-3)' : ''}"></i>`).join('');
+</script>
+</body>
+</html>

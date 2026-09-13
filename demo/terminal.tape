@@ -8,7 +8,9 @@ Set FontSize 19
 Set Width 1320
 Set Height 800
 Set Padding 28
-Set TypingSpeed 45ms
+Set TypingSpeed 70ms
+# 帧率别设高：VHS 逐帧截图，截不过来时成片会被压快
+Set Framerate 12
 Set Theme "Catppuccin Mocha"
 Set WindowBar Colorful
 
@@ -18,30 +20,27 @@ Enter
 Sleep 2s
 Show
 
-Type "# 所有项目，一行一个"
-Sleep 400ms
+Type@20ms "# 所有项目，一行一个"
 Enter
 Type "corpus"
 Sleep 300ms
 Enter
-Sleep 4s
+Sleep 6s
 
-Type "clear"
+Type@5ms "clear"
 Enter
-Type "# 一个项目的现场：规划、任务、下一步"
-Sleep 400ms
+Type@20ms "# 一个项目的现场：规划、任务、下一步"
 Enter
 Type "corpus show"
 Sleep 300ms
 Enter
-Sleep 7s
+Sleep 12s
 
-Type "clear"
+Type@5ms "clear"
 Enter
-Type "# 换个工具接着做：取“月度导出”的续接上下文"
-Sleep 400ms
+Type@20ms "# 换个工具接着做：取“月度导出”的续接上下文"
 Enter
 Type "corpus context --task T04"
 Sleep 300ms
 Enter
-Sleep 8s
+Sleep 12s

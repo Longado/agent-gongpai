@@ -10,6 +10,7 @@
 - 第 11 轮完成：重新整理（保留修正和任务编号）、移出误归类会话、工具版本。
 - 第 12 轮完成：前端改成 ThreeUI 风格的深色控制台界面，新增语料带；像素 logo 在 `web/logo.svg`。
 - 第 13 轮完成：拆分任务、结果线索（`src/engine/hints.ts`）、续接上下文导出 Markdown。
+- 第 29 轮完成：讲解视频改成按段落配音（一段一次请求，ElevenLabs 返回逐字时间点，画面在念到那句时切换），加烧录字幕（Chrome 渲染透明字幕图、ffmpeg overlay 叠加，本机 ffmpeg 没有字幕滤镜）并导出 `explainer.srt`；终端录两遍校准，对齐误差 0.2 秒内；配音比画面长时画面停在最后一帧。成片 4 分 12 秒，转写错字率 1.1%。
 - 第 28 轮完成：四分钟讲解视频（`npm run record:explainer` → `docs/media/explainer.mp4`，也放在 Pages 的 `media/`）：理念卡片 `demo/slides.html` + 终端 + 窗口 + 架构图逐列亮起 + 接下来；ElevenLabs `eleven_v3` + Anna Su 配音，按配音长度定停留；录屏公共部分抽到 `demo/chrome.ts`。配音密钥只在 `.env`。窗口 GIF 改无损截帧后 1.1MB。
 - 第 27 轮完成：录屏节奏修正（终端录屏原先被压快到约三分之二，降帧率后与脚本时长一致；窗口字幕停留加长、GIF 改原分辨率）；README 加架构图（`docs/diagram/architecture.html` 渲染）和“接下来”。
 - 第 26 轮完成：自动录屏。`demo/terminal.tape`（VHS）录终端，`demo/window.ts` 用无头 Chrome 按分镜点本地应用、带光标和字幕、ffmpeg 合成；输出在 `docs/media/`，README 顶部换成这两段录屏；`docs/DEMO.md` 加了分镜表和三分钟讲解视频的旁白稿。重录：`npm run record`。

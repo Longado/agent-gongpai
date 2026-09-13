@@ -2,15 +2,16 @@
 // 运行：npm run record:window（需要 Chrome 和 ffmpeg）。
 // 数据在临时目录里，HOME 也指向临时目录，所以服务读不到你本机的任何对话，画面里只有示例项目。
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ffmpeg, mixVoice, speak, type Clip } from './tts.ts';
+import { ffmpeg, mixVoice, speakParagraph } from './tts.ts';
 import { evaluate, openChrome, sleep, startRecording, waitFor, writeFrames, type Page } from './chrome.ts';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-// --voice：按旁白时长停留，配音后输出到 --out 目录的 window-voice.mp4（给 demo/explainer.ts 拼讲解视频用），不动 GIF
+// --voice：七句旁白连成一段一口气念完，念到哪句就做哪个镜头的动作；输出到 --out 目录的 window-voice.mp4 和字幕时间 window-voice.json
+// （给 demo/explainer.ts 拼讲解视频用），不动 GIF。配音版不显示画面里的字幕条，字幕统一由讲解视频加。
 const VOICED = process.argv.includes('--voice');
 const OUT = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : join(ROOT, 'docs', 'media');
 const W = 1280;
@@ -91,30 +92,37 @@ try {
   await sleep(600); // 等字体加载完
 
   // 边操作边截图，记下每帧的时间，合成时按真实间隔排
-  const clips: (Clip | null)[] = [];
-  for (const s of SHOTS) clips.push(VOICED && s.voice ? await speak(s.voice) : null); // 一句一句请求：入门套餐最多同时 3 个
-  const starts: number[] = [];
+  const voiced = SHOTS.filter((x) => x.voice);
+  const para = VOICED ? await speakParagraph(voiced.map((x) => x.voice!)) : null;
+  if (para) await page.send('Runtime.evaluate', { expression: `document.getElementById('rec-cap').style.display = 'none'` });
   const recording = startRecording(page);
-  for (const [i, shot] of SHOTS.entries()) {
-    if (VOICED && !shot.voice) { starts.push(0); continue; } // 配音版由架构图收尾，没有旁白的镜头跳过
-    const start = Date.now();
-    starts.push(start);
-    await page.send('Runtime.evaluate', { expression: `document.getElementById('rec-cap').textContent = ${JSON.stringify(shot.caption)}` });
-    await shot.act?.(act);
-    const voiceEnd = clips[i] ? start + clips[i]!.seconds * 1000 + 700 : 0; // 念完稍停一下
-    await sleep(VOICED ? Math.max(1200, voiceEnd - Date.now()) : shot.hold); // 配音版的节奏由旁白决定
+  await sleep(300);
+  const audioStart = Date.now();
+  if (para) {
+    for (const [k, shot] of voiced.entries()) {
+      await sleep(Math.max(0, audioStart + para.partStarts[k] * 1000 - 150 - Date.now())); // 念到这句时开始动
+      await shot.act?.(act);
+    }
+    await sleep(Math.max(0, audioStart + para.seconds * 1000 + 800 - Date.now()));
+  } else {
+    for (const shot of SHOTS) {
+      await page.send('Runtime.evaluate', { expression: `document.getElementById('rec-cap').textContent = ${JSON.stringify(shot.caption)}` });
+      await shot.act?.(act);
+      await sleep(shot.hold);
+    }
   }
   const frames = await recording.stop();
 
   const dir = join(tmp, 'frames');
   const listFile = writeFrames(frames, dir);
   mkdirSync(OUT, { recursive: true });
-  if (VOICED) {
+  if (para) {
     const silent = join(dir, 'silent.mp4');
     ffmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, '-vf', 'fps=25,format=yuv420p', '-c:v', 'libx264', '-crf', '22', silent]);
-    const t0 = frames[0].t;
-    mixVoice(silent, clips.flatMap((c, i) => (c ? [{ file: c.file, at: (starts[i] - t0) / 1000 }] : [])), join(OUT, 'window-voice.mp4'));
-    console.log(`已生成 ${join(OUT, 'window-voice.mp4')}：${((frames.at(-1)!.t - t0) / 1000).toFixed(1)} 秒`);
+    const at = (audioStart - frames[0].t) / 1000;
+    mixVoice(silent, [{ file: para.file, at }], join(OUT, 'window-voice.mp4'));
+    writeFileSync(join(OUT, 'window-voice.json'), JSON.stringify(para.cues.map((c) => ({ ...c, start: c.start + at, end: c.end + at }))));
+    console.log(`已生成 ${join(OUT, 'window-voice.mp4')}：${((frames.at(-1)!.t - frames[0].t) / 1000).toFixed(1)} 秒`);
   } else {
     ffmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, '-vf', 'fps=25,format=yuv420p', '-c:v', 'libx264', '-crf', '24', '-movflags', '+faststart', join(OUT, 'window.mp4')]);
     ffmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, '-vf', 'fps=10,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle', join(OUT, 'window.gif')]);

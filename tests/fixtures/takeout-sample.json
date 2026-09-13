@@ -1,0 +1,22 @@
+[
+  {
+    "header": "Gemini", "title": "Used Gemini Apps", "titleUrl": "https://gemini.google.com/app/c/abc123",
+    "time": "2026-09-08T02:00:00.000Z", "products": ["Gemini Apps"],
+    "details": [{ "name": "Request", "value": "第一版要有记账录入、分类统计、月度导出。" }, { "name": "Response", "value": "好的，按这三项推进。" }]
+  },
+  {
+    "header": "Gemini", "title": "Used Gemini Apps", "titleUrl": "https://gemini.google.com/app/c/abc123",
+    "time": "2026-09-08T02:05:00.000Z", "products": ["Gemini Apps"],
+    "details": [{ "name": "Request", "value": "预算提醒先不要。" }]
+  },
+  {
+    "header": "Gemini Apps", "title": "Prompted 帮我想一个旅行计划", "time": "2026-09-09T10:00:00.000Z", "products": ["Gemini Apps"],
+    "safeHtmlItem": [{ "html": "<p>可以先去<b>杭州</b>。</p>" }]
+  },
+  {
+    "header": "Gemini", "title": "Used Gemini Apps", "titleUrl": "https://gemini.google.com/app/def456",
+    "time": "2026-09-10T03:00:00.000Z", "products": ["Gemini Apps"],
+    "userInteractions": ["{\"request\":{\"text\":\"导出做成表格文件\"},\"response\":{\"text\":\"建议用 CSV，带 BOM。\"}}"]
+  },
+  { "header": "Gemini", "title": "Used Gemini Apps", "time": "2026-09-10T04:00:00.000Z", "products": ["Gemini Apps"] }
+]

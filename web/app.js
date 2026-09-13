@@ -326,6 +326,12 @@ async function renderSettings() {
         <label class="check"><input type="checkbox" id="im-partial"> 只复制了一部分，前面还有没加载的内容</label>
         <label>对话内容。用“你：”“Gemini：”这样的开头区分发言者<textarea id="im-x"></textarea></label>
         <div><button class="btn pri" data-act="import">导入</button></div></div></div>
+      <div class="blk"><div class="blk-t">从 Google Takeout 导入 Gemini 历史</div><div class="stack">
+        <div class="s">在 takeout.google.com 只选“我的活动 → Gemini Apps”，格式选 JSON，解压后选 MyActivity.json。导出是活动日志，回复常有缺失，缺回复的对话会标为“部分”。</div>
+        <label>导入到<select id="tk-p">${projectOpts}</select></label>
+        <input type="file" id="tk-file" accept=".json,application/json">
+        <div><button class="btn" data-act="tk-preview">读取文件</button></div>
+        <div id="tk-list"></div></div></div>
       <div class="stack" style="align-content:start">
         <div class="blk"><div class="blk-t">新建项目</div><div class="stack">
           <label>名称<input type="text" id="np-n"></label><label>一句话目标<input type="text" id="np-g"></label>
@@ -540,6 +546,25 @@ const on = {
     const r = await api(`/api/projects/${pid}/import`, { method: 'POST', body: { text, title, label: $('#im-l').value, partial: $('#im-partial').checked, date: $('#im-d').value, url: $('#im-u').value.trim() } });
     toast(`导入 ${r.newMessages} 条新消息${r.unsure ? '，有一段认不出发言者，请在原文里核对' : ''}。点“同步”整理`);
     $('#im-x').value = '';
+    await load();
+  },
+  async 'tk-preview'() {
+    const file = $('#tk-file').files?.[0];
+    if (!file) return toast('先选 MyActivity.json');
+    const pid = $('#tk-p').value;
+    const res = await fetch(`/api/projects/${pid}/takeout/preview`, { method: 'POST', headers: { 'x-corpus': '1', 'content-type': 'application/json' }, body: await file.text() });
+    const data = await res.json();
+    if (!res.ok) return toast(data.error || '读取失败');
+    $('#tk-list').innerHTML = data.conversations.length ? `<div class="s">${data.conversations.length} 段对话，勾选和这个项目有关的：</div>
+      ${data.conversations.map((c) => `<label class="check" style="padding:4px 0;border-top:1px solid var(--rule)"><input type="checkbox" class="tk" value="${esc(c.key)}"><span class="s" style="min-width:86px">${esc(c.start.slice(0, 10))}</span><span>${esc(c.title)}</span><span class="s">${c.turns} 条${c.missingResponse ? ' · 缺回复' : ''}</span></label>`).join('')}
+      <div style="margin-top:8px"><button class="btn pri" data-act="tk-import" data-token="${esc(data.token)}" data-pid="${esc(pid)}">导入所选</button></div>` : '<div class="muted">文件里没有找到对话。Gemini 活动记录被关掉时，导出是空的。</div>';
+  },
+  async 'tk-import'(el) {
+    const keys = [...document.querySelectorAll('.tk:checked')].map((x) => x.value);
+    if (!keys.length) return toast('至少勾选一段对话');
+    const r = await api(`/api/projects/${el.dataset.pid}/takeout/import`, { method: 'POST', body: { token: el.dataset.token, keys } });
+    toast(`导入 ${r.sessions} 段对话，新消息 ${r.newMessages} 条。点“同步”整理`);
+    $('#tk-list').innerHTML = '';
     await load();
   },
   async delete(el) {

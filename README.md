@@ -64,7 +64,7 @@ npm run corpus -- project add "项目名" --dir /你的/代码目录 --goal "一
 npm run corpus -- serve                               # 在页面上点"同步"
 ```
 
-网页 AI 的对话在"接入设置"里粘贴导入，可以附上原页面链接，用"你：""Gemini："这样的开头区分发言者；只复制了一部分就勾上"只复制了一部分"，Working Corpus 不会拿缺失的前文下结论。
+网页 AI 的对话在"接入设置"里粘贴导入，可以附上原页面链接，用"你：""Gemini："这样的开头区分发言者；只复制了一部分就勾上"只复制了一部分"，Working Corpus 不会拿缺失的前文下结论。Gemini 的历史也可以从 Google Takeout 导出后批量导入，先列出所有对话，只挑和项目有关的。
 
 ## 在 AI 工具里直接取
 

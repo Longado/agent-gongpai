@@ -9,6 +9,7 @@ import { openDb } from './db.ts';
 import { syncClaudeCode } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
 import { importText } from './ingest/paste.ts';
+import { parseTakeout, importTakeout } from './ingest/takeout.ts';
 import { extractProject } from './extract/run.ts';
 import { deepseek } from './extract/model.ts';
 import { buildProjectView } from './engine/view.ts';
@@ -23,6 +24,8 @@ const HELP = `用法：npm run corpus -- <命令>
   project pause|resume --project <编号>              暂停或恢复采集（已有数据保留）
   sync [--no-extract] [--quiet]                    读取 Claude Code 和 Codex 的新对话，并整理；--quiet 不输出（给钩子用）
   import <文件> --project <编号> --label <来源> --title <标题> [--partial] [--date YYYY-MM-DD]
+  takeout <MyActivity.json> --project <编号> [--pick 编号,编号 | --all]
+                                                   Google Takeout 的 Gemini 历史：不带 --pick 先列出对话
   extract [--project <编号>] [--fresh]              只整理，不读取；--fresh 清掉旧证据从头整理（任务编号和修正保留）
   show --project <编号>                             打印项目现场
   context --project <编号> --task <T01>              打印续接上下文
@@ -36,14 +39,14 @@ const { positionals, values } = parseArgs({
   options: {
     dir: { type: 'string', multiple: true }, goal: { type: 'string' }, project: { type: 'string' }, task: { type: 'string' },
     label: { type: 'string' }, title: { type: 'string' }, partial: { type: 'boolean' }, date: { type: 'string' },
-    'no-extract': { type: 'boolean' }, fresh: { type: 'boolean' }, quiet: { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
+    'no-extract': { type: 'boolean' }, fresh: { type: 'boolean' }, quiet: { type: 'boolean' }, pick: { type: 'string' }, all: { type: 'boolean' }, port: { type: 'string' }, only: { type: 'string' },
   },
 });
 
 // 默认数据库跟着仓库走，不跟着当前目录：MCP 连接器是从别的目录启动的
 loadEnv();
 const LEGACY_DB = fileURLToPath(new URL('../data/gongpai.db', import.meta.url));
-if (!process.env.CORPUS_DB && existsSync(LEGACY_DB) && !existsSync(dbPath())) {
+if (!process.env.CORPUS_DB && !process.env.CORPUS_HOME && existsSync(LEGACY_DB) && !existsSync(dbPath())) {
   console.error(`提示：旧版本的数据库在 ${LEGACY_DB}，新位置是 ${dbPath()}。需要旧数据的话手动移动过去。`);
 }
 const db = () => openDb(dbPath());
@@ -87,6 +90,16 @@ async function main() {
     const d = db();
     const r = importText(d, { projectId: need(values.project, 'project'), text: readFileSync(need(sub, '文件'), 'utf8'), label: need(values.label, 'label'), title: need(values.title, 'title'), coverage: values.partial ? 'partial' : 'full', date: values.date });
     console.log(`导入 ${r.newMessages} 条新消息${r.unsure ? '；有一段认不出发言者，请在页面上核对' : ''}`);
+  } else if (cmd === 'takeout') {
+    const raw = JSON.parse(readFileSync(need(sub, '文件'), 'utf8'));
+    const pid = need(values.project, 'project');
+    if (!values.pick && !values.all) {
+      for (const c of parseTakeout(raw)) console.log(`${c.key.padEnd(20)} ${c.start.slice(0, 10)} ${String(c.turns.length).padStart(3)} 条${c.missingResponse ? '（缺回复）' : ''}  ${c.title}`);
+      console.log('\n用 --pick 编号,编号 导入挑选的对话，或 --all 全部导入');
+    } else {
+      const r = importTakeout(db(), pid, raw, values.all ? 'all' : values.pick!.split(',').map((x) => x.trim()));
+      console.log(`导入 ${r.sessions} 段对话，新消息 ${r.newMessages} 条。点“同步”整理`);
+    }
   } else if (cmd === 'extract') {
     const d = db();
     if (values.fresh) for (const id of values.project ? [values.project] : d.listProjects().map((p) => p.id)) d.resetExtraction(id);

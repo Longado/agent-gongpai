@@ -13,6 +13,10 @@
 
 它是一个跑在你电脑上的**本地应用**：终端里用 `corpus` 命令，桌面上用一个独立窗口。数据都在本机。
 
+<p align="center"><a href="https://longado.github.io/working-corpus/"><b>▶ 在线演示</b></a>　·　<a href="examples/">示例文件</a>　·　<a href="docs/DEMO.md">演示脚本</a></p>
+
+在线演示不用安装，打开就是一个“记账小程序”的示例项目：六段对话来自 Gemini 网页、Codex 和 Claude Code，页面上能看任务状态、规划的两个版本、被替代的决定、每条结论的原话，也能取续接上下文。演示是只读的。
+
 <p align="center"><img alt="终端里：corpus 看所有项目，corpus show 看项目现场" src="docs/cli.png" width="760"></p>
 
 <p align="center"><img alt="桌面窗口：AI 说导出做完了，Working Corpus 显示待验证，下一步是去验证它" src="docs/screenshot.png" width="760"></p>
@@ -27,7 +31,7 @@
 git clone https://github.com/Longado/working-corpus && cd working-corpus
 npm install && npm link          # 装好全局命令 corpus
 
-corpus demo                      # 用样本数据建两个示例项目
+corpus demo                      # 用样本数据建一个示例项目：记账小程序
 corpus                           # 终端里：所有项目的概况
 corpus show                      # 终端里：一个项目的现场
 corpus app                       # 桌面窗口：后台启动本地服务，用独立窗口打开
@@ -116,7 +120,7 @@ VS Code 聊天记录 ─────┼─ 读取、过滤、去重、隐藏凭�
 
 ## 现在的状态
 
-需求文档 v0.2 的 P0、P1 和补充项全部完成。120 条测试；七个样本场景的真模型评估里，硬红线从没失败过；用 `deepseek-flash` 整理一个 74 条消息的真实项目约 2 分钟。评估记录在 `docs/EVAL.md`，样本少，只说明这几种场景没出错，不代表真实对话里的准确率。
+需求文档 v0.2 的 P0、P1 和补充项全部完成。122 条测试；七个样本场景的真模型评估里，硬红线从没失败过；用 `deepseek-flash` 整理一个 74 条消息的真实项目约 2 分钟。评估记录在 `docs/EVAL.md`，样本少，只说明这几种场景没出错，不代表真实对话里的准确率。
 
 还没用真实数据验证的：网页版 Gemini 的 Takeout 导出格式、浏览器扩展在登录后的真实页面上的表现、大模型在真实项目上的长期准确率。
 

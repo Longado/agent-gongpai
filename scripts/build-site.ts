@@ -1,0 +1,32 @@
+// 生成在线演示站点（GitHub Pages）：用示例数据建一个内存库，把页面要的接口结果导成 JSON，
+// 页面在只读模式下按路径读这些文件。默认输出到 site/（不进 git），也可以传一个目录。
+import { pathToFileURL } from 'node:url';
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { openDb } from '../src/db.ts';
+import { loadDemo, SHOWCASE } from '../src/demo.ts';
+import { messagesPayload, projectPayload, sourcesPayload, statePayload } from '../src/server.ts';
+import { buildContext } from '../src/engine/context.ts';
+
+const out = process.argv[2] ? pathToFileURL(`${process.argv[2].replace(/\/$/, '')}/`) : new URL('../site/', import.meta.url);
+const web = new URL('../web/', import.meta.url);
+rmSync(out, { recursive: true, force: true });
+mkdirSync(new URL('data/p/', out), { recursive: true });
+
+const db = openDb(':memory:');
+const ids = loadDemo(db, SHOWCASE);
+const write = (file: string, data: unknown) => writeFileSync(new URL(`data/${file}`, out), JSON.stringify(data));
+
+write('state.json', statePayload(db, '示例数据（未调用模型）', null));
+write('sources.json', sourcesPayload(db, { installed: { claudeCode: true, codex: true, vscode: true }, lastSyncAt: null, badLines: 0, skippedDirs: [], model: '示例数据（未调用模型）' }));
+for (const id of ids) {
+  const payload = projectPayload(db, id);
+  write(`p/${id}.json`, payload);
+  write(`p/${id}.messages.json`, messagesPayload(db, id, db.messagesForProject(id).map((m) => m.id)));
+  write(`p/${id}.context.json`, Object.fromEntries(payload.view.tasks.map((t) => [t.id, buildContext(db, id, t.id)])));
+}
+
+for (const f of ['app.js', 'style.css', 'logo.svg']) cpSync(new URL(f, web), new URL(f, out));
+const html = readFileSync(new URL('index.html', web), 'utf8').replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="corpus-static" content="1">');
+writeFileSync(new URL('index.html', out), html);
+writeFileSync(new URL('.nojekyll', out), '');
+console.log(`已生成在线演示：${ids.length} 个示例项目 → ${out.pathname}`);

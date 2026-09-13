@@ -5,6 +5,8 @@ import { loadSample } from './samples.ts';
 import { storeEvidence } from './extract/validate.ts';
 
 const SAMPLES = new URL('../samples/', import.meta.url);
+/** 展示用的完整示例（记账小程序）：`corpus demo` 和在线演示都用它。 */
+export const SHOWCASE = ['S8-showcase'];
 
 export function loadDemo(db: Db, samples = ['S1-plan-change', 'S4-claim-then-fail']): string[] {
   return samples.map((dir) => {

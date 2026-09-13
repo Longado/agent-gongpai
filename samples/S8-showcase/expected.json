@@ -1,0 +1,79 @@
+{
+ "tasks": [
+  {
+   "match": [
+    "登录"
+   ],
+   "status": "done"
+  },
+  {
+   "match": [
+    "录入"
+   ],
+   "status": "to_verify"
+  },
+  {
+   "match": [
+    "统计"
+   ],
+   "status": "doing"
+  },
+  {
+   "match": [
+    "导出"
+   ],
+   "status": "to_verify",
+   "minReopens": 1
+  },
+  {
+   "match": [
+    "备份"
+   ],
+   "status": "todo"
+  },
+  {
+   "match": [
+    "图表"
+   ],
+   "status": "blocked"
+  },
+  {
+   "match": [
+    "云同步"
+   ],
+   "status": "cancelled"
+  }
+ ],
+ "taskCount": 7,
+ "absentTasks": [
+  "预算"
+ ],
+ "plan": {
+  "versions": 2,
+  "noPlan": false
+ },
+ "notRecommended": [
+  "云同步",
+  "预算"
+ ],
+ "firstNext": [
+  "导出"
+ ],
+ "doneEvents": 1,
+ "coverageWarning": false,
+ "decisions": [
+  {
+   "match": [
+    "本地存储"
+   ],
+   "superseded": true
+  },
+  {
+   "match": [
+    "存储层"
+   ],
+   "superseded": false
+  }
+ ],
+ "note": "展示用的示例项目：在线演示和 corpus demo 都用它。一个项目里覆盖规划变更、确认完成、待验证、失败重开、受阻、取消、被替代的决定、AI 建议、多来源。"
+}

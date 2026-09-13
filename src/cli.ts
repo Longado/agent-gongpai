@@ -38,7 +38,7 @@ const HELP = `Working Corpus · 用法：corpus <命令>
   serve [--port 4173]                              在前台运行本地服务
   mcp                                              以 MCP 连接器方式运行（stdio），见 docs/MCP.md
   eval [--only S1]                                 用真模型跑样本评估
-  demo                                             用样本数据建两个示例项目（不调用模型）
+  demo                                             用样本数据建一个示例项目（不调用模型）
 
 没装全局命令时，把 corpus 换成 npm run corpus --`;
 
@@ -155,8 +155,8 @@ async function main() {
     const { runMcp } = await import('./mcp.ts'); // stdout 只留给协议消息，这里不能打印任何东西
     runMcp(db());
   } else if (cmd === 'demo') {
-    const { loadDemo } = await import('./demo.ts');
-    const ids = loadDemo(db());
+    const { loadDemo, SHOWCASE } = await import('./demo.ts');
+    const ids = loadDemo(db(), SHOWCASE);
     console.log(`已建示例项目：${ids.join('、')}。在终端看：corpus show --project ${ids[0]}；打开窗口：corpus app`);
   } else if (cmd === 'eval') {
     console.log('用真模型跑样本，推理模型每批要几十秒……');

@@ -7,7 +7,7 @@
 1. `npm install && npm link`，确认 `corpus` 能用。macOS 上可以先 `npm run mac-app`，把 `dist/Working Corpus.app` 放进程序坞。
 2. 用一个真实项目：`corpus project add "项目名" --dir <仓库目录> --goal "..."`。开发期间在 Claude Code、Codex 里各做过一些事；网页 AI 里讨论过需求的，用扩展加进来或粘贴导入。
 3. 演示前 `corpus app`，在窗口里点一次“同步”，确认整理完成。别在台上第一次同步。
-4. 网络不好就用 `corpus demo` 的示例项目，不需要模型。
+4. 网络不好就用 `corpus demo` 的示例项目（记账小程序），不需要模型。连安装都来不及，就打开在线演示 https://longado.github.io/working-corpus/ ，只读。
 
 ## 现场
 

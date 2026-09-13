@@ -75,6 +75,51 @@ function parse<T>(schema: z.ZodType<T>, data: unknown): T {
   return r.data;
 }
 
+/** 左侧项目列表。 */
+export function statePayload(db: Db, modelName: string, lastSyncAt: string | null) {
+  const projects = db.listProjects().map((p) => {
+    const v = buildProjectView(db, p.id);
+    return { ...p, counts: v.counts, pending: v.pending.length };
+  });
+  return { projects, model: modelName, lastSyncAt };
+}
+
+/** 接入设置页：各来源读到多少。是否安装、上次同步这些本机状态由调用方给。 */
+export function sourcesPayload(db: Db, local: { installed: { claudeCode: boolean; codex: boolean; vscode: boolean }; lastSyncAt: string | null; badLines: number; skippedDirs: [string, number][]; model: string }) {
+  const count = (sql: string, ...a: string[]) => Number((db.raw.prepare(sql).get(...a) as { c: number }).c);
+  const src = (s: string) => ({
+    sessions: count('SELECT COUNT(*) AS c FROM sessions WHERE source = ? AND project_id IS NOT NULL', s),
+    messages: count('SELECT COUNT(*) AS c FROM messages m JOIN sessions s ON s.id = m.session_id WHERE s.source = ?', s),
+  });
+  const { installed, ...rest } = local;
+  return {
+    claudeCode: { installed: installed.claudeCode, version: db.latestToolVersion('claude_code'), ...src('claude_code') },
+    codex: { installed: installed.codex, version: db.latestToolVersion('codex'), ...src('codex') },
+    vscode: { installed: installed.vscode, version: null, ...src('vscode') },
+    imports: src('import'),
+    ...rest,
+  };
+}
+
+/** 页面要的项目数据。本地服务和在线演示（scripts/build-site.ts）共用，演示看到的就是真实运行的样子。 */
+export function projectPayload(db: Db, id: string) {
+  const view = buildProjectView(db, id);
+  const evidence: Record<string, Pick<StoredEvidence, 'cite' | 'kind' | 'detail' | 'speaker' | 'reason' | 'at'>> = {};
+  for (const e of db.evidenceForProject(id)) evidence[e.id] = { cite: e.cite, kind: e.kind, detail: e.detail, speaker: e.speaker, reason: e.reason, at: e.at };
+  const sessions = db.sessionsForProject(id).map((s) => ({ id: s.id, label: s.label, title: s.title, coverage: s.coverage, source: s.source, messages: db.messagesForSession(s.id).length }));
+  const textOf = new Map(db.messagesForProject(id).map((m) => [m.id, m.text]));
+  const hints = Object.fromEntries(view.tasks.map((t) => [t.id, resultHints(t.evidenceIds.flatMap((e) => evidence[e]?.cite ?? []).map((m) => textOf.get(m) ?? ''))]));
+  return { project: db.getProject(id), view, evidence, hints, sessions, unextracted: db.unextractedCount(id), band: corpusBand(db, id, view), failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) };
+}
+
+/** 页面要的消息：带上会话信息。 */
+export function messagesPayload(db: Db, projectId: string, ids: string[]) {
+  return db.messagesByIds(ids, projectId).map((m) => {
+    const s = db.getSession(m.sessionId);
+    return { ...m, session: s && { label: s.label, title: s.title, coverage: s.coverage, source: s.source, url: s.url } };
+  });
+}
+
 export function serve(db: Db, port: number) {
   let lastSync: { at: string; cc: SyncResult; cx: SyncResult; vs?: SyncResult } | null = null;
   // Takeout 预览后暂存解析前的原文，导入时不用再传一遍；只留最近一份
@@ -125,31 +170,19 @@ export function serve(db: Db, port: number) {
     if (parts[0] !== 'api') throw new HttpError(404, '找不到这个地址');
 
     if (method === 'GET' && parts[1] === 'state') {
-      const projects = db.listProjects().map((p) => {
-        const v = buildProjectView(db, p.id);
-        return { ...p, counts: v.counts, pending: v.pending.length };
-      });
-      return send(res, 200, { projects, model: model.name, lastSyncAt: lastSync?.at ?? null });
+      return send(res, 200, statePayload(db, model.name, lastSync?.at ?? null));
     }
 
     if (method === 'GET' && parts[1] === 'sources') {
-      const count = (sql: string, ...a: string[]) => Number((db.raw.prepare(sql).get(...a) as { c: number }).c);
-      const src = (s: string) => ({
-        sessions: count('SELECT COUNT(*) AS c FROM sessions WHERE source = ? AND project_id IS NOT NULL', s),
-        messages: count('SELECT COUNT(*) AS c FROM messages m JOIN sessions s ON s.id = m.session_id WHERE s.source = ?', s),
-      });
       const skipped: Record<string, number> = {};
       for (const r of [lastSync?.cc, lastSync?.cx, lastSync?.vs]) for (const [k, n] of Object.entries(r?.skippedDirs ?? {})) skipped[k] = (skipped[k] ?? 0) + n;
-      return send(res, 200, {
-        claudeCode: { installed: existsSync(join(homedir(), '.claude', 'projects')), version: db.latestToolVersion('claude_code'), ...src('claude_code') },
-        codex: { installed: existsSync(join(homedir(), '.codex', 'sessions')), version: db.latestToolVersion('codex'), ...src('codex') },
-        vscode: { installed: existsSync(defaultVscodeRoot()), version: null, ...src('vscode') },
-        imports: src('import'),
+      return send(res, 200, sourcesPayload(db, {
+        installed: { claudeCode: existsSync(join(homedir(), '.claude', 'projects')), codex: existsSync(join(homedir(), '.codex', 'sessions')), vscode: existsSync(defaultVscodeRoot()) },
         lastSyncAt: lastSync?.at ?? null,
         badLines: (lastSync?.cc.badLines ?? 0) + (lastSync?.cx.badLines ?? 0),
         skippedDirs: Object.entries(skipped).sort((a, b) => b[1] - a[1]).slice(0, 12),
         model: model.name,
-      });
+      }));
     }
 
     if (method === 'POST' && parts[1] === 'read') {
@@ -178,24 +211,14 @@ export function serve(db: Db, port: number) {
     }
 
     if (method === 'GET' && parts.length === 3) {
-      const view = buildProjectView(db, id);
-      const evidence: Record<string, Pick<StoredEvidence, 'cite' | 'kind' | 'detail' | 'speaker' | 'reason' | 'at'>> = {};
-      for (const e of db.evidenceForProject(id)) evidence[e.id] = { cite: e.cite, kind: e.kind, detail: e.detail, speaker: e.speaker, reason: e.reason, at: e.at };
-      const sessions = db.sessionsForProject(id).map((s) => ({ id: s.id, label: s.label, title: s.title, coverage: s.coverage, source: s.source, messages: db.messagesForSession(s.id).length }));
       db.logUsage(id, 'open_project');
-      const textOf = new Map(db.messagesForProject(id).map((m) => [m.id, m.text]));
-      const hints = Object.fromEntries(view.tasks.map((t) => [t.id, resultHints(t.evidenceIds.flatMap((e) => evidence[e]?.cite ?? []).map((m) => textOf.get(m) ?? ''))]));
-      return send(res, 200, { project: p, view, evidence, hints, sessions, unextracted: db.unextractedCount(id), band: corpusBand(db, id, view), failed: db.failedBatches(id), allTasks: db.tasksForProject(id).map((t) => ({ id: t.id, name: t.name })) });
+      return send(res, 200, projectPayload(db, id));
     }
 
     if (method === 'GET' && parts[3] === 'messages') {
       // 只返回当前项目的消息（安全评审：之前是全局接口，知道编号就能跨项目读原文）
       const ids = (url.searchParams.get('ids') ?? '').split(',').filter(Boolean).slice(0, 50);
-      const msgs = db.messagesByIds(ids, id).map((m) => {
-        const s = db.getSession(m.sessionId);
-        return { ...m, session: s && { label: s.label, title: s.title, coverage: s.coverage, source: s.source, url: s.url } };
-      });
-      return send(res, 200, msgs);
+      return send(res, 200, messagesPayload(db, id, ids));
     }
 
     if (method === 'GET' && parts[3] === 'context') {

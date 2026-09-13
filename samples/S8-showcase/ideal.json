@@ -1,0 +1,259 @@
+{
+ "evidence": [
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含登录"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含记账录入"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "分类统计"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含分类统计"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含月度导出"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "云同步"
+   },
+   "kind": "plan_item",
+   "cite": [
+    "m1"
+   ],
+   "detail": "第一版包含云同步"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "预算提醒"
+   },
+   "kind": "plan_add",
+   "cite": [
+    "m2"
+   ],
+   "detail": "AI 建议加预算提醒"
+  },
+  {
+   "reasoning": "按原文",
+   "task": "none",
+   "kind": "out_of_scope",
+   "cite": [
+    "m3"
+   ],
+   "detail": "预算提醒以后再说"
+  },
+  {
+   "reasoning": "按原文",
+   "task": "none",
+   "kind": "decision_adopt",
+   "cite": [
+    "m3"
+   ],
+   "detail": "数据先用小程序本地存储"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "started",
+   "cite": [
+    "m4"
+   ],
+   "detail": "实现微信授权登录"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m5"
+   ],
+   "detail": "AI 说登录已实现"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "登录"
+   },
+   "kind": "user_confirms_done",
+   "cite": [
+    "m6"
+   ],
+   "detail": "你试过登录，没问题"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "started",
+   "cite": [
+    "m7"
+   ],
+   "detail": "开始做记账录入"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "分类统计"
+   },
+   "kind": "started",
+   "cite": [
+    "m7",
+    "m8"
+   ],
+   "detail": "分类统计的数据查询写了一半，还差页面"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "记账录入"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m8"
+   ],
+   "detail": "AI 说记账录入做好了"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "云同步"
+   },
+   "kind": "plan_cancel",
+   "cite": [
+    "m9"
+   ],
+   "detail": "云同步不做了",
+   "reason": "先不做账号体系"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "本地备份"
+   },
+   "kind": "plan_add",
+   "cite": [
+    "m9",
+    "m10"
+   ],
+   "detail": "新增本地备份",
+   "reason": "先不做账号体系"
+  },
+  {
+   "reasoning": "按原文",
+   "task": "none",
+   "kind": "decision_adopt",
+   "cite": [
+    "m9"
+   ],
+   "detail": "存储改成封装好的存储层",
+   "reason": "方便以后换",
+   "replaces": [
+    "m3"
+   ]
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "started",
+   "cite": [
+    "m11"
+   ],
+   "detail": "实现月度导出，导出成表格文件"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m12"
+   ],
+   "detail": "AI 说月度导出已完成"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "failure",
+   "cite": [
+    "m13"
+   ],
+   "detail": "导出的文件打不开，提示格式错误"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "月度导出"
+   },
+   "kind": "ai_claims_done",
+   "cite": [
+    "m14"
+   ],
+   "detail": "AI 说编码问题修好了"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "图表页"
+   },
+   "kind": "started",
+   "cite": [
+    "m15"
+   ],
+   "detail": "做图表页"
+  },
+  {
+   "reasoning": "按原文",
+   "task": {
+    "newName": "图表页"
+   },
+   "kind": "blocked",
+   "cite": [
+    "m16"
+   ],
+   "detail": "缺设计稿"
+  }
+ ]
+}

@@ -10,6 +10,7 @@
 - 第 11 轮完成：重新整理（保留修正和任务编号）、移出误归类会话、工具版本。
 - 第 12 轮完成：前端改成 ThreeUI 风格的深色控制台界面，新增语料带；像素 logo 在 `web/logo.svg`。
 - 第 13 轮完成：拆分任务、结果线索（`src/engine/hints.ts`）、续接上下文导出 Markdown。
+- 第 25 轮完成：GitHub 上的演示。在线演示 https://longado.github.io/working-corpus/ （`scripts/build-site.ts` 用示例数据导出接口结果，页面带 `corpus-static` 标记时只读这些 JSON，改动一律提示只读；`.github/workflows/pages.yml` 推送 main 自动发布）；展示样本 `samples/S8-showcase`（记账小程序，`corpus demo` 现在只建这一个）；`examples/` 放终端输出、续接上下文、粘贴和 Takeout 示例；另加 `test.yml` 在 GitHub 上跑测试。
 - 第 24 轮完成：命令行和桌面应用（`src/tui.ts`、`src/app.ts`、`scripts/make-mac-app.sh`）；README 和演示脚本按“命令行加桌面窗口”重写。
 - 第 23 轮完成：消息编辑版本（`db.detectBranches`、导入对齐里的配对）。需求文档 v0.2 全部完成。
 - 第 22 轮完成：下一步的前置条件（`src/engine/next.ts`）。失败引起的状态说明统一以“失败”开头。
@@ -22,7 +23,7 @@
 - 第 15 轮完成：Claude Code 插件（`.claude-plugin/`、`plugin/`、`bin/corpus`），见 `docs/PLUGIN.md`。
 - 第 14 轮完成：导入原页面链接、决定“已被替代”（提示词 `evidence-v4`，新增样本 S7）、打开页面自动只读同步。
 - 数据和配置默认在 `~/.working-corpus/`（`CORPUS_HOME`、`CORPUS_DB` 可改）；密钥读取顺序：环境变量 > 仓库 `.env` > `~/.working-corpus/.env`。
-- 测试 120 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
+- 测试 122 条全绿；样本评估七个样本 61/61（S8 是展示样本，只跑引擎测试，没用真模型评估）。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
 
 ## 下一步
 

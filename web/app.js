@@ -16,7 +16,36 @@ const evLink = (id, text = '依据') => (id ? `<button class="link" data-act="ev
 let app = { projects: [], model: '', lastSyncAt: null, pid: null, data: null };
 const later = new Set(JSON.parse(sessionStorage.getItem('later') || '[]'));
 
+// 在线演示（GitHub Pages）没有本地服务：构建时把接口结果导成 JSON，这里按路径读；改动一律拒绝
+const STATIC = document.querySelector('meta[name="corpus-static"]') !== null;
+const READ_ONLY = '这是只读演示。装到本机后可以修改、同步和导入。';
+
+async function staticApi(path, method) {
+  const u = new URL(path, location.origin);
+  const p = u.pathname.split('/').filter(Boolean).map(decodeURIComponent); // ['api', 'projects', id, ...]
+  if (method !== 'GET') {
+    if (p[1] === 'read' || p[3] === 'usage') return {}; // 打开页面时的读取和使用记录，演示里静默跳过
+    throw new Error(READ_ONLY);
+  }
+  const get = async (file) => {
+    const res = await fetch(`data/${file}`);
+    if (!res.ok) throw new Error('演示数据缺失');
+    return res.json();
+  };
+  if (p[1] === 'state' || p[1] === 'sources') return get(`${p[1]}.json`);
+  const base = `p/${p[2]}`;
+  if (p.length === 3) return get(`${base}.json`);
+  if (p[3] === 'messages') {
+    const ids = new Set((u.searchParams.get('ids') ?? '').split(','));
+    return (await get(`${base}.messages.json`)).filter((m) => ids.has(m.id));
+  }
+  if (p[3] === 'context') return { text: (await get(`${base}.context.json`))[u.searchParams.get('task')] ?? '' };
+  if (p[3] === 'usage') return {};
+  throw new Error(READ_ONLY);
+}
+
 async function api(path, opts = {}) {
+  if (STATIC) return staticApi(path, opts.method ?? 'GET');
   const res = await fetch(path, {
     method: opts.method ?? 'GET',
     headers: { 'x-corpus': '1', ...(opts.body ? { 'content-type': 'application/json' } : {}) },
@@ -70,7 +99,7 @@ async function load() {
 function renderNav(r) {
   const pending = app.data?.view.pending.length ?? 0;
   $('#nav').innerHTML = `
-    <div class="brand"><img src="/logo.svg" alt="" width="22" height="22" style="image-rendering:pixelated">Working Corpus</div>
+    <div class="brand"><img src="logo.svg" alt="" width="22" height="22" style="image-rendering:pixelated">Working Corpus</div>
     <div class="grp">项目</div>
     ${app.projects.map((p) => `<a href="#/p/${esc(p.id)}" class="${p.id === app.pid && r.page !== 'settings' ? 'on' : ''}">${esc(p.name)}${p.pending ? `<span class="cnt">${p.pending}</span>` : ''}</a>`).join('')}
     <div class="grp">需要处理</div>
@@ -364,7 +393,7 @@ function usageLine(u) {
 
 function renderWelcome() {
   return `<div class="stack" style="max-width:560px">
-    <div class="row"><img src="/logo.svg" alt="" width="40" height="40" style="image-rendering:pixelated"><h1 style="margin:0">Working Corpus</h1></div>
+    <div class="row"><img src="logo.svg" alt="" width="40" height="40" style="image-rendering:pixelated"><h1 style="margin:0">Working Corpus</h1></div>
     <p>你继续在 Claude Code、Codex、网页 AI 里干活。回来时，这里有一页有证据的项目现场：做到哪、卡在哪、下一步做什么。</p>
     <div class="blk"><div class="blk-t">先建一个项目</div><div class="stack">
       <label>名称<input type="text" id="np-n"></label><label>一句话目标<input type="text" id="np-g"></label>
@@ -566,6 +595,7 @@ const on = {
   },
   async 'tk-preview'() {
     const file = $('#tk-file').files?.[0];
+    if (STATIC) return toast(READ_ONLY);
     if (!file) return toast('先选 MyActivity.json');
     const pid = $('#tk-p').value;
     const zip = /\.zip$/i.test(file.name);
@@ -601,6 +631,7 @@ document.addEventListener('click', async (e) => {
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('#modal').hidden = true; $('#drawer').hidden = true; } });
 window.addEventListener('hashchange', () => load().catch((err) => toast(err.message)));
+if (STATIC) document.body.insertAdjacentHTML('afterbegin', `<div class="demo-bar">在线演示 · 示例数据 · 只读<a href="https://github.com/Longado/working-corpus">装到本机 →</a></div>`);
 // 第一次打开时只读一次新对话（不整理、不调用模型），切换页面时不重复读
 api('/api/read', { method: 'POST' }).catch(() => {}).finally(() => {
   load().catch((err) => { $('#main').innerHTML = `<div class="empty">${esc(err.message)}</div>`; });

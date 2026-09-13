@@ -10,6 +10,7 @@
 - 第 11 轮完成：重新整理（保留修正和任务编号）、移出误归类会话、工具版本。
 - 第 12 轮完成：前端改成 ThreeUI 风格的深色控制台界面，新增语料带；像素 logo 在 `web/logo.svg`。
 - 第 13 轮完成：拆分任务、结果线索（`src/engine/hints.ts`）、续接上下文导出 Markdown。
+- 第 24 轮完成：命令行和桌面应用（`src/tui.ts`、`src/app.ts`、`scripts/make-mac-app.sh`）；README 和演示脚本按“命令行加桌面窗口”重写。
 - 第 23 轮完成：消息编辑版本（`db.detectBranches`、导入对齐里的配对）。需求文档 v0.2 全部完成。
 - 第 22 轮完成：下一步的前置条件（`src/engine/next.ts`）。失败引起的状态说明统一以“失败”开头。
 - 第 21 轮完成：Gemini 扩展自动同步（`extension/background.js`、`lib.js`）；有链接的导入按链接认会话。需求文档 v0.2 的 P0、P1 全部完成。
@@ -21,7 +22,7 @@
 - 第 15 轮完成：Claude Code 插件（`.claude-plugin/`、`plugin/`、`bin/corpus`），见 `docs/PLUGIN.md`。
 - 第 14 轮完成：导入原页面链接、决定“已被替代”（提示词 `evidence-v4`，新增样本 S7）、打开页面自动只读同步。
 - 数据和配置默认在 `~/.working-corpus/`（`CORPUS_HOME`、`CORPUS_DB` 可改）；密钥读取顺序：环境变量 > 仓库 `.env` > `~/.working-corpus/.env`。
-- 测试 116 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
+- 测试 120 条全绿；样本评估七个样本 61/61。需求差距和轮次安排见 `docs/REQUIREMENTS-GAP.md`。
 
 ## 下一步
 
@@ -30,7 +31,7 @@
 1. 真实使用：用户自己的项目跑一到两周，看接入设置里的使用记录（打开、复制、修正次数）。修正多的地方就是提示词或引擎该改的地方，改完跑 `npm run corpus -- eval` 并记进 `docs/EVAL.md`。
 2. 网页版 Gemini 的 Takeout 格式：用户在 Takeout 勾“我的活动 → Gemini Apps”（JSON）导一份，校准解析。
 3. 扩展在登录后的真实 Gemini 页面上点一次、发一条新消息，核对手动加入和自动同步。
-4. 如果要给别人用：打包成双击就能打开的桌面应用（现在要先在终端跑 `corpus serve`）。
+4. 如果要给没有开发环境的人用：现在的 Working Corpus.app 依赖本机的 Node 和这个仓库；要做成独立安装包得把 Node 一起打进去（比如 Electron 或 Node 单文件可执行），并做代码签名。
 
 ## 环境和坑
 

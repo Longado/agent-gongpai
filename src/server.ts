@@ -12,6 +12,7 @@ import { corpusBand } from './engine/band.ts';
 import { resultHints } from './engine/hints.ts';
 import { syncClaudeCode, type SyncResult } from './ingest/claude-code.ts';
 import { syncCodex } from './ingest/codex.ts';
+import { syncVscode, defaultVscodeRoot } from './ingest/vscode.ts';
 import { importText } from './ingest/paste.ts';
 import { parseTakeout, readTakeoutPath, importConversations, type TakeoutConversation } from './ingest/takeout.ts';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
@@ -75,7 +76,7 @@ function parse<T>(schema: z.ZodType<T>, data: unknown): T {
 }
 
 export function serve(db: Db, port: number) {
-  let lastSync: { at: string; cc: SyncResult; cx: SyncResult } | null = null;
+  let lastSync: { at: string; cc: SyncResult; cx: SyncResult; vs?: SyncResult } | null = null;
   // Takeout 预览后暂存解析前的原文，导入时不用再传一遍；只留最近一份
   let takeout: { token: string; projectId: string; conversations: TakeoutConversation[] } | null = null;
   let syncing = false;
@@ -128,10 +129,11 @@ export function serve(db: Db, port: number) {
         messages: count('SELECT COUNT(*) AS c FROM messages m JOIN sessions s ON s.id = m.session_id WHERE s.source = ?', s),
       });
       const skipped: Record<string, number> = {};
-      for (const r of [lastSync?.cc, lastSync?.cx]) for (const [k, n] of Object.entries(r?.skippedDirs ?? {})) skipped[k] = (skipped[k] ?? 0) + n;
+      for (const r of [lastSync?.cc, lastSync?.cx, lastSync?.vs]) for (const [k, n] of Object.entries(r?.skippedDirs ?? {})) skipped[k] = (skipped[k] ?? 0) + n;
       return send(res, 200, {
         claudeCode: { installed: existsSync(join(homedir(), '.claude', 'projects')), version: db.latestToolVersion('claude_code'), ...src('claude_code') },
         codex: { installed: existsSync(join(homedir(), '.codex', 'sessions')), version: db.latestToolVersion('codex'), ...src('codex') },
+        vscode: { installed: existsSync(defaultVscodeRoot()), version: null, ...src('vscode') },
         imports: src('import'),
         lastSyncAt: lastSync?.at ?? null,
         badLines: (lastSync?.cc.badLines ?? 0) + (lastSync?.cx.badLines ?? 0),
@@ -144,8 +146,9 @@ export function serve(db: Db, port: number) {
       // 打开页面时调用：只读新对话，不整理，不调用模型
       const cc = syncClaudeCode(db);
       const cx = syncCodex(db);
-      lastSync = { at: new Date().toISOString(), cc, cx };
-      return send(res, 200, { newMessages: cc.newMessages + cx.newMessages });
+      const vs = syncVscode(db);
+      lastSync = { at: new Date().toISOString(), cc, cx, vs };
+      return send(res, 200, { newMessages: cc.newMessages + cx.newMessages + vs.newMessages });
     }
 
     if (parts[1] !== 'projects') throw new HttpError(404, '找不到这个地址');
@@ -287,10 +290,11 @@ export function serve(db: Db, port: number) {
       try {
         const cc = syncClaudeCode(db);
         const cx = syncCodex(db);
-        lastSync = { at: new Date().toISOString(), cc, cx };
+        const vs = syncVscode(db);
+        lastSync = { at: new Date().toISOString(), cc, cx, vs };
         db.logUsage(id, 'sync');
         const r = await extractProject(db, id, model);
-        return send(res, 200, { newMessages: cc.newMessages + cx.newMessages, badLines: cc.badLines + cx.badLines, ...r });
+        return send(res, 200, { newMessages: cc.newMessages + cx.newMessages + vs.newMessages, badLines: cc.badLines + cx.badLines, ...r });
       } finally {
         syncing = false;
       }

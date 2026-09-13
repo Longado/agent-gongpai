@@ -1,0 +1,8 @@
+{"kind": 0, "v": {"version": 3, "sessionId": "11111111-2222-3333-4444-555555555555", "creationDate": 1789200000000, "initialLocation": "panel", "requests": [], "pendingRequests": [], "responderUsername": "", "hasPendingEdits": false, "inputState": {"inputText": ""}}}
+{"kind": 1, "k": ["responderUsername"], "v": "GitHub Copilot"}
+{"kind": 2, "k": ["requests"], "v": [{"requestId": "request_a", "timestamp": 1789200060000, "message": {"text": "帮我写月度导出函数", "parts": [{"kind": "text"}]}, "modelId": "copilot/gpt-5", "agent": {"extensionId": {"value": "GitHub.copilot-chat"}}, "response": [], "responseId": "response_a", "variableData": {"variables": []}}]}
+{"kind": 2, "k": ["requests", 0, "response"], "v": [{"kind": "markdownContent", "content": {"value": "好的，先写查询：", "isTrusted": false}}]}
+{"kind": 2, "k": ["requests", 0, "response"], "v": [{"kind": "toolInvocationSerialized", "toolId": "x"}, {"kind": "markdownContent", "content": {"value": "导出函数写好了。", "isTrusted": false}}]}
+{"kind": 1, "k": ["customTitle"], "v": "月度导出"}
+{"kind": 2, "k": ["requests"], "v": [{"requestId": "request_b", "timestamp": 1789200120000, "message": {"text": "文件打不开", "parts": []}, "response": [], "responseId": "response_b"}]}
+{"kind": 9, "k": ["unknownOp"], "v": 1}

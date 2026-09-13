@@ -311,6 +311,7 @@ async function renderSettings() {
     <div class="tbl"><table><thead><tr><th>来源</th><th>状态</th><th>已读到</th><th>读取范围</th></tr></thead><tbody>
       <tr><td>Claude Code${s.claudeCode.version ? ` <span class="s">${esc(s.claudeCode.version)}</span>` : ''}</td><td>${status(s.claudeCode)}</td><td>${s.claudeCode.sessions} 个会话 · ${s.claudeCode.messages} 条</td><td>只读已绑定目录下的会话；子 agent 的会话暂不读取</td></tr>
       <tr><td>Codex${s.codex.version ? ` <span class="s">${esc(s.codex.version)}</span>` : ''}</td><td>${status(s.codex)}</td><td>${s.codex.sessions} 个会话 · ${s.codex.messages} 条</td><td>只读已绑定目录下的会话；工具报错暂不读取</td></tr>
+      <tr><td>VS Code 聊天</td><td>${status(s.vscode)}</td><td>${s.vscode.sessions} 个会话 · ${s.vscode.messages} 条</td><td>VS Code 自带的聊天面板（Copilot Chat 等），按工作区文件夹归属；VS Code 里的 Claude Code、Codex 扩展算在上面两行</td></tr>
       <tr><td>网页 AI · 手动导入</td><td><span class="dot d-ok"></span>手动</td><td>${s.imports.sessions} 段 · ${s.imports.messages} 条</td><td>只包含你粘贴的部分；原始时间拿不到时记采集时间</td></tr>
     </tbody></table></div>
     <div class="s">上次同步：${s.lastSyncAt ? fmt(s.lastSyncAt) : '本次打开后还没同步'}${s.badLines ? ` · ${s.badLines} 行格式异常已跳过，已有数据不受影响` : ''}</div>
